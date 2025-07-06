@@ -32,3 +32,18 @@ def test_indices_wrapper():
     assert hasattr(client, "indices")
     assert callable(getattr(client.indices, "create"))
     client.close()
+
+
+def test_nodes_info_and_stats():
+    client = HyperspaceClient({"host": "localhost"})
+    info = client.nodes.info()
+    stats = client.nodes.stats()
+    assert "nodes" in info
+    assert "nodes" in stats
+    client.close()
+
+
+def test_info_build_hash():
+    client = HyperspaceClient({"host": "localhost"})
+    assert "build_hash" in client.info()["version"]
+    client.close()

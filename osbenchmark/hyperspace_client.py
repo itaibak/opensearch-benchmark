@@ -24,6 +24,7 @@ class _BaseClient:
         # initialize helpers; subclasses may overwrite
         self.cluster = None
         self.indices = None
+        self.nodes = None
 
     def _url(self, path: str) -> str:
         return f"{self.base_url.rstrip('/')}/{path.lstrip('/')}"
@@ -41,6 +42,100 @@ class _AsyncCluster:
 
     async def health(self, *args, **kwargs):
         return {"status": "green", "relocating_shards": 0}
+
+
+class _Nodes:
+    """Minimal nodes helper providing static info and stats."""
+
+    def __init__(self, client: "HyperspaceClient"):
+        self._client = client
+
+    def info(self, node_id: str = "_all") -> Dict[str, Any]:
+        name = self._client.host["host"]
+        return {
+            "nodes": {
+                name: {
+                    "name": name,
+                    "host": name,
+                    "ip": name,
+                    "os": {"name": "", "version": "", "available_processors": 1},
+                    "jvm": {"vm_vendor": "", "version": ""},
+                }
+            }
+        }
+
+    def stats(self, metric: str = "_all", level: str = None) -> Dict[str, Any]:
+        name = self._client.host["host"]
+        return {
+            "nodes": {
+                name: {
+                    "name": name,
+                    "indices": {},
+                    "thread_pool": {},
+                    "breakers": {},
+                    "jvm": {
+                        "gc": {
+                            "collectors": {
+                                "old": {"collection_time_in_millis": 0, "collection_count": 0},
+                                "young": {"collection_time_in_millis": 0, "collection_count": 0},
+                            }
+                        },
+                        "mem": {"pools": {}},
+                        "buffer_pools": {},
+                    },
+                    "transport": {},
+                    "process": {"cpu": {}},
+                    "indexing_pressure": {},
+                }
+            }
+        }
+
+
+class _AsyncNodes:
+    """Async variant of :class:`_Nodes`."""
+
+    def __init__(self, client: "AsyncHyperspaceClient"):
+        self._client = client
+
+    async def info(self, node_id: str = "_all") -> Dict[str, Any]:
+        name = self._client.host["host"]
+        return {
+            "nodes": {
+                name: {
+                    "name": name,
+                    "host": name,
+                    "ip": name,
+                    "os": {"name": "", "version": "", "available_processors": 1},
+                    "jvm": {"vm_vendor": "", "version": ""},
+                }
+            }
+        }
+
+    async def stats(self, metric: str = "_all", level: str = None) -> Dict[str, Any]:
+        name = self._client.host["host"]
+        return {
+            "nodes": {
+                name: {
+                    "name": name,
+                    "indices": {},
+                    "thread_pool": {},
+                    "breakers": {},
+                    "jvm": {
+                        "gc": {
+                            "collectors": {
+                                "old": {"collection_time_in_millis": 0, "collection_count": 0},
+                                "young": {"collection_time_in_millis": 0, "collection_count": 0},
+                            }
+                        },
+                        "mem": {"pools": {}},
+                        "buffer_pools": {},
+                    },
+                    "transport": {},
+                    "process": {"cpu": {}},
+                    "indexing_pressure": {},
+                }
+            }
+        }
 
 
 class _Indices:
@@ -132,10 +227,11 @@ class HyperspaceClient(_BaseClient):
         self.transport = _SyncTransport(self.base_url, self.host, self.headers, timeout)
         self.cluster = _Cluster()
         self.indices = _Indices(self)
+        self.nodes = _Nodes(self)
 
     def info(self) -> Dict[str, Any]:
         # provide a minimal version response for compatibility
-        return {"version": {"number": "1.0.0"}}
+        return {"version": {"number": "1.0.0", "build_hash": ""}}
 
     def bulk(self, index: str, body: Any) -> Dict[str, Any]:
         docs = self._parse_bulk_body(body)
@@ -206,9 +302,10 @@ class AsyncHyperspaceClient(_BaseClient):
         self.transport = _AsyncTransport(self.base_url, self.host, self.headers, timeout, self._session)
         self.cluster = _AsyncCluster()
         self.indices = _AsyncIndices(self)
+        self.nodes = _AsyncNodes(self)
 
     async def info(self) -> Dict[str, Any]:
-        return {"version": {"number": "1.0.0"}}
+        return {"version": {"number": "1.0.0", "build_hash": ""}}
 
     async def bulk(self, index: str, body: Any, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         docs = HyperspaceClient._parse_bulk_body(body)
