@@ -7,8 +7,10 @@ import msgpack
 import requests
 import aiohttp
 
+from osbenchmark.context import RequestContextHolder
 
-class _BaseClient:
+
+class _BaseClient(RequestContextHolder):
     def __init__(self, host: Dict[str, Any], timeout: int = 60, token: Optional[str] = None):
         self.host = {
             "host": host.get("host"),
@@ -157,6 +159,9 @@ class _Indices:
     def refresh(self, index: str, **kwargs):
         return self._client.commit(index)
 
+    def stats(self, metric: str = "_all", level: str = None, **kwargs):
+        return {}
+
 
 class _AsyncIndices:
     def __init__(self, client: "AsyncHyperspaceClient"):
@@ -177,19 +182,30 @@ class _AsyncIndices:
     async def refresh(self, index: str, **kwargs):
         return await self._client.commit(index)
 
+    async def stats(self, metric: str = "_all", level: str = None, **kwargs):
+        return {}
+
 
 class _SyncTransport:
-    def __init__(self, base_url: str, host: Dict[str, Any], headers: Dict[str, Any], timeout: int):
+    def __init__(self, base_url: str, host: Dict[str, Any], headers: Dict[str, Any], timeout: int, ctx_holder: RequestContextHolder):
         self.hosts = [host]
         self._base_url = base_url.rstrip("/")
         self._headers = headers
         self._timeout = timeout
+        self._ctx_holder = ctx_holder
 
     def perform_request(self, method: str, path: str, params: Optional[Dict[str, Any]] = None,
                         body: Any = None, headers: Optional[Dict[str, Any]] = None):
         url = f"{self._base_url}/{path.lstrip('/')}"
         hdrs = {**self._headers, **(headers or {})}
-        resp = requests.request(method, url, params=params, json=body, headers=hdrs, timeout=self._timeout)
+        self._ctx_holder.on_client_request_start()
+        self._ctx_holder.on_request_start()
+        if isinstance(body, (bytes, bytearray)):
+            resp = requests.request(method, url, params=params, data=body, headers=hdrs, timeout=self._timeout)
+        else:
+            resp = requests.request(method, url, params=params, json=body, headers=hdrs, timeout=self._timeout)
+        self._ctx_holder.on_request_end()
+        self._ctx_holder.on_client_request_end()
         resp.raise_for_status()
         if resp.content:
             return resp.json()
@@ -200,20 +216,29 @@ class _SyncTransport:
 
 
 class _AsyncTransport:
-    def __init__(self, base_url: str, host: Dict[str, Any], headers: Dict[str, Any], timeout: int, session: aiohttp.ClientSession):
+    def __init__(self, base_url: str, host: Dict[str, Any], headers: Dict[str, Any], timeout: int, session: aiohttp.ClientSession, ctx_holder: RequestContextHolder):
         self.hosts = [host]
         self._base_url = base_url.rstrip("/")
         self._headers = headers
         self._timeout = timeout
         self._session = session
+        self._ctx_holder = ctx_holder
 
     async def perform_request(self, method: str, path: str, params: Optional[Dict[str, Any]] = None,
                               body: Any = None, headers: Optional[Dict[str, Any]] = None):
         url = f"{self._base_url}/{path.lstrip('/')}"
         hdrs = {**self._headers, **(headers or {})}
-        async with self._session.request(method, url, params=params, json=body, headers=hdrs) as resp:
+        self._ctx_holder.on_client_request_start()
+        self._ctx_holder.on_request_start()
+        async with self._session.request(method, url, params=params,
+                                         json=None if isinstance(body, (bytes, bytearray)) else body,
+                                         data=body if isinstance(body, (bytes, bytearray)) else None,
+                                         headers=hdrs) as resp:
             resp.raise_for_status()
-            return await resp.json()
+            result = await resp.json()
+        self._ctx_holder.on_request_end()
+        self._ctx_holder.on_client_request_end()
+        return result
 
     async def close(self):
         await self._session.close()
@@ -224,7 +249,7 @@ class HyperspaceClient(_BaseClient):
 
     def __init__(self, host: Dict[str, Any], timeout: int = 60, token: Optional[str] = None):
         super().__init__(host, timeout, token)
-        self.transport = _SyncTransport(self.base_url, self.host, self.headers, timeout)
+        self.transport = _SyncTransport(self.base_url, self.host, self.headers, timeout, self)
         self.cluster = _Cluster()
         self.indices = _Indices(self)
         self.nodes = _Nodes(self)
@@ -236,40 +261,52 @@ class HyperspaceClient(_BaseClient):
     def bulk(self, index: str, body: Any) -> Dict[str, Any]:
         docs = self._parse_bulk_body(body)
         data = msgpack.packb(docs)
-        resp = requests.post(self._url(f"{index}/batch"), data=data,
-                             headers={**self.headers, "Content-Type": "application/msgpack"},
-                             timeout=self.timeout)
-        resp.raise_for_status()
-        return resp.json()
+        return self.transport.perform_request(
+            "POST",
+            f"{index}/batch",
+            body=data,
+            headers={**self.headers, "Content-Type": "application/msgpack"},
+        )
 
     def index(self, index: str, document: Dict[str, Any]) -> Dict[str, Any]:
         data = msgpack.packb(document)
-        resp = requests.put(self._url(f"{index}/document/add"), data=data,
-                            headers={**self.headers, "Content-Type": "application/msgpack"},
-                            timeout=self.timeout)
-        resp.raise_for_status()
-        return resp.json()
+        return self.transport.perform_request(
+            "PUT",
+            f"{index}/document/add",
+            body=data,
+            headers={**self.headers, "Content-Type": "application/msgpack"},
+        )
 
     def search(self, index: str, body: Dict[str, Any], params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        resp = requests.post(self._url(f"{index}/dsl_search"), json=body, params=params,
-                             headers=self.headers, timeout=self.timeout)
-        resp.raise_for_status()
-        return resp.json()
+        return self.transport.perform_request(
+            "POST",
+            f"{index}/dsl_search",
+            params=params,
+            body=body,
+            headers=self.headers,
+        )
 
     def indices_create(self, index: str, body: Any = None) -> Dict[str, Any]:
-        resp = requests.put(self._url(f"collection/{index}"), json=body, headers=self.headers, timeout=self.timeout)
-        resp.raise_for_status()
-        return resp.json()
+        return self.transport.perform_request(
+            "PUT",
+            f"collection/{index}",
+            body=body,
+            headers=self.headers,
+        )
 
     def indices_delete(self, index: str) -> Dict[str, Any]:
-        resp = requests.get(self._url(f"collection/{index}"), headers=self.headers, timeout=self.timeout)
-        resp.raise_for_status()
-        return resp.json()
+        return self.transport.perform_request(
+            "GET",
+            f"collection/{index}",
+            headers=self.headers,
+        )
 
     def commit(self, index: str) -> Dict[str, Any]:
-        resp = requests.get(self._url(f"{index}/commit"), headers=self.headers, timeout=self.timeout)
-        resp.raise_for_status()
-        return resp.json()
+        return self.transport.perform_request(
+            "GET",
+            f"{index}/commit",
+            headers=self.headers,
+        )
 
     def close(self):
         self.transport.close()
@@ -299,7 +336,7 @@ class AsyncHyperspaceClient(_BaseClient):
     def __init__(self, host: Dict[str, Any], timeout: int = 60, token: Optional[str] = None):
         super().__init__(host, timeout, token)
         self._session = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=timeout))
-        self.transport = _AsyncTransport(self.base_url, self.host, self.headers, timeout, self._session)
+        self.transport = _AsyncTransport(self.base_url, self.host, self.headers, timeout, self._session, self)
         self.cluster = _AsyncCluster()
         self.indices = _AsyncIndices(self)
         self.nodes = _AsyncNodes(self)
@@ -310,39 +347,53 @@ class AsyncHyperspaceClient(_BaseClient):
     async def bulk(self, index: str, body: Any, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         docs = HyperspaceClient._parse_bulk_body(body)
         data = msgpack.packb(docs)
-        async with self._session.post(self._url(f"{index}/batch"), data=data,
-                                       params=params,
-                                       headers={**self.headers, "Content-Type": "application/msgpack"}) as resp:
-            resp.raise_for_status()
-            return await resp.json()
+        return await self.transport.perform_request(
+            "POST",
+            f"{index}/batch",
+            params=params,
+            body=data,
+            headers={**self.headers, "Content-Type": "application/msgpack"},
+        )
 
     async def index(self, index: str, document: Dict[str, Any]) -> Dict[str, Any]:
         data = msgpack.packb(document)
-        async with self._session.put(self._url(f"{index}/document/add"), data=data,
-                                     headers={**self.headers, "Content-Type": "application/msgpack"}) as resp:
-            resp.raise_for_status()
-            return await resp.json()
+        return await self.transport.perform_request(
+            "PUT",
+            f"{index}/document/add",
+            body=data,
+            headers={**self.headers, "Content-Type": "application/msgpack"},
+        )
 
     async def search(self, index: str, body: Dict[str, Any], params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        async with self._session.post(self._url(f"{index}/dsl_search"), json=body, params=params,
-                                      headers=self.headers) as resp:
-            resp.raise_for_status()
-            return await resp.json()
+        return await self.transport.perform_request(
+            "POST",
+            f"{index}/dsl_search",
+            params=params,
+            body=body,
+            headers=self.headers,
+        )
 
     async def indices_create(self, index: str, body: Any = None) -> Dict[str, Any]:
-        async with self._session.put(self._url(f"collection/{index}"), json=body, headers=self.headers) as resp:
-            resp.raise_for_status()
-            return await resp.json()
+        return await self.transport.perform_request(
+            "PUT",
+            f"collection/{index}",
+            body=body,
+            headers=self.headers,
+        )
 
     async def indices_delete(self, index: str) -> Dict[str, Any]:
-        async with self._session.get(self._url(f"collection/{index}"), headers=self.headers) as resp:
-            resp.raise_for_status()
-            return await resp.json()
+        return await self.transport.perform_request(
+            "GET",
+            f"collection/{index}",
+            headers=self.headers,
+        )
 
     async def commit(self, index: str) -> Dict[str, Any]:
-        async with self._session.get(self._url(f"{index}/commit"), headers=self.headers) as resp:
-            resp.raise_for_status()
-            return await resp.json()
+        return await self.transport.perform_request(
+            "GET",
+            f"{index}/commit",
+            headers=self.headers,
+        )
 
     async def close(self):
         await self.transport.close()
