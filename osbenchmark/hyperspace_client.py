@@ -224,16 +224,18 @@ class _SyncTransport:
         hdrs = {**self._headers, **(headers or {})}
         self._ctx_holder.on_client_request_start()
         self._ctx_holder.on_request_start()
-        if isinstance(body, (bytes, bytearray)):
-            resp = requests.request(method, url, params=params, data=body, headers=hdrs, timeout=self._timeout)
-        else:
-            resp = requests.request(method, url, params=params, json=body, headers=hdrs, timeout=self._timeout)
-        self._ctx_holder.on_request_end()
-        self._ctx_holder.on_client_request_end()
-        resp.raise_for_status()
-        if resp.content:
-            return resp.json()
-        return {}
+        try:
+            if isinstance(body, (bytes, bytearray)):
+                resp = requests.request(method, url, params=params, data=body, headers=hdrs, timeout=self._timeout)
+            else:
+                resp = requests.request(method, url, params=params, json=body, headers=hdrs, timeout=self._timeout)
+            resp.raise_for_status()
+            if resp.content:
+                return resp.json()
+            return {}
+        finally:
+            self._ctx_holder.on_request_end()
+            self._ctx_holder.on_client_request_end()
 
     def close(self):
         pass
@@ -254,15 +256,21 @@ class _AsyncTransport:
         hdrs = {**self._headers, **(headers or {})}
         self._ctx_holder.on_client_request_start()
         self._ctx_holder.on_request_start()
-        async with self._session.request(method, url, params=params,
-                                         json=None if isinstance(body, (bytes, bytearray)) else body,
-                                         data=body if isinstance(body, (bytes, bytearray)) else None,
-                                         headers=hdrs) as resp:
-            resp.raise_for_status()
-            result = await resp.json()
-        self._ctx_holder.on_request_end()
-        self._ctx_holder.on_client_request_end()
-        return result
+        try:
+            async with self._session.request(
+                method,
+                url,
+                params=params,
+                json=None if isinstance(body, (bytes, bytearray)) else body,
+                data=body if isinstance(body, (bytes, bytearray)) else None,
+                headers=hdrs,
+            ) as resp:
+                resp.raise_for_status()
+                result = await resp.json()
+            return result
+        finally:
+            self._ctx_holder.on_request_end()
+            self._ctx_holder.on_client_request_end()
 
     async def close(self):
         await self._session.close()
