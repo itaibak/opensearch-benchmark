@@ -522,9 +522,15 @@ class BulkIndex(Runner):
         request_context_holder.on_client_request_start()
 
         if with_action_metadata:
-            api_kwargs.pop("index", None)
-            # only half of the lines are documents
-            response = await opensearch.bulk(params=bulk_params, **api_kwargs)
+            # Elasticsearch allows specifying the target index in the action
+            # metadata of the bulk body. For Hyperspace we still need to pass
+            # the index explicitly so we preserve it in that case.
+            index_arg = api_kwargs.pop("index", None)
+            if hasattr(opensearch, "is_hyperspace") and index_arg:
+                response = await opensearch.bulk(index=index_arg, params=bulk_params, **api_kwargs)
+            else:
+                # only half of the lines are documents
+                response = await opensearch.bulk(params=bulk_params, **api_kwargs)
         else:
             response = await opensearch.bulk(doc_type=params.get("type"), params=bulk_params, **api_kwargs)
 

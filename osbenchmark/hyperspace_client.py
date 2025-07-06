@@ -23,6 +23,8 @@ class _BaseClient(RequestContextHolder):
         if token:
             self.headers["Authorization"] = f"Bearer {token}"
 
+        self.is_hyperspace = True
+
         # initialize helpers; subclasses may overwrite
         self.cluster = None
         self.indices = None
