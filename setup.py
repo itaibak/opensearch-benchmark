@@ -110,6 +110,8 @@ install_requires = [
     # License: Apache 2.0
     # Required for Kafka message producer
     "aiokafka>=0.11.0",
+    "requests>=2.0.0",
+    "msgpack>=1.0.0",
     "tqdm"
 ]
 

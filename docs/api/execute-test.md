@@ -81,6 +81,7 @@ Argument | Description | Required
 `target-hosts` | Define a comma-separated list of host:port pairs which should be targeted if using the pipeline 'benchmark-only' (default: `localhost:9200`). | No
 `load-worker-coordinator-hosts` | Define a comma-separated list of hosts which should generate load (default: `localhost`). | No
 `client-options` | Define a comma-separated list of client options to use. The options will be passed to the OpenSearch Python client (default: `timeout:60`). | No
+`client_type` | Set to `hyperspace` to use the Hyperspace compatible client instead of the OpenSearch client. | No
 `on-error` | Controls how OSB behaves on response errors. Options are `continue` and `abort` (default: `continue`). | No
 `telemetry` | Enable the provided telemetry devices, provided as a comma-separated list. List possible telemetry devices with `opensearch-benchmark list telemetry`. | No
 `telemetry-params` | Define a comma-separated list of key:value pairs that are injected verbatim to the telemetry devices as parameters. | No
