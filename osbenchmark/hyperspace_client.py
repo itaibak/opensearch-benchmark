@@ -151,10 +151,22 @@ class _Indices:
         return self._client.indices_delete(index=index)
 
     def exists(self, index: str, **kwargs) -> bool:
-        info = requests.get(self._client._url("collectionsInfo"), headers=self._client.headers, timeout=self._client.timeout)
-        info.raise_for_status()
-        collections = info.json() or []
-        return any(c.get("name") == index for c in collections)
+        resp = self._client.transport.perform_request(
+            "GET",
+            "collectionsInfo",
+            headers=self._client.headers,
+        )
+        collections = resp or []
+        if isinstance(collections, dict):
+            collections = collections.get("collections", collections)
+        for c in collections:
+            if isinstance(c, dict):
+                name = c.get("name")
+            else:
+                name = c
+            if name == index:
+                return True
+        return False
 
     def refresh(self, index: str, **kwargs):
         return self._client.commit(index)
@@ -174,10 +186,22 @@ class _AsyncIndices:
         return await self._client.indices_delete(index=index)
 
     async def exists(self, index: str, **kwargs) -> bool:
-        async with self._client._session.get(self._client._url("collectionsInfo"), headers=self._client.headers) as resp:
-            resp.raise_for_status()
-            collections = await resp.json() or []
-            return any(c.get("name") == index for c in collections)
+        resp = await self._client.transport.perform_request(
+            "GET",
+            "collectionsInfo",
+            headers=self._client.headers,
+        )
+        collections = resp or []
+        if isinstance(collections, dict):
+            collections = collections.get("collections", collections)
+        for c in collections:
+            if isinstance(c, dict):
+                name = c.get("name")
+            else:
+                name = c
+            if name == index:
+                return True
+        return False
 
     async def refresh(self, index: str, **kwargs):
         return await self._client.commit(index)
