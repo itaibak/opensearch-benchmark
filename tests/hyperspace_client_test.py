@@ -1,5 +1,6 @@
 import json
 import pytest
+import requests
 from pathlib import Path
 
 from osbenchmark.hyperspace_client import HyperspaceClient
@@ -61,4 +62,27 @@ def test_nodes_info_and_stats():
 def test_info_build_hash():
     client = HyperspaceClient({"host": "localhost"})
     assert "build_hash" in client.info()["version"]
+    client.close()
+
+
+def test_debug_prints_api_call(monkeypatch, capsys):
+    class Resp:
+        content = b"{}"
+        def raise_for_status(self):
+            pass
+        def json(self):
+            return {}
+
+    def dummy_request(method, url, params=None, data=None, json=None, headers=None, timeout=None):
+        return Resp()
+
+    monkeypatch.setattr(requests, "request", dummy_request)
+    monkeypatch.setattr(HyperspaceClient, "on_client_request_start", lambda self: None)
+    monkeypatch.setattr(HyperspaceClient, "on_client_request_end", lambda self: None)
+    monkeypatch.setattr(HyperspaceClient, "on_request_start", lambda self: None)
+    monkeypatch.setattr(HyperspaceClient, "on_request_end", lambda self: None)
+    client = HyperspaceClient({"host": "localhost"}, debug=True)
+    client.transport.perform_request("GET", "collectionsInfo")
+    out = capsys.readouterr().out
+    assert "[DEBUG] GET" in out
     client.close()

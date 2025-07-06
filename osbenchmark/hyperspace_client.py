@@ -12,7 +12,7 @@ from osbenchmark.context import RequestContextHolder
 
 
 class _BaseClient(RequestContextHolder):
-    def __init__(self, host: Dict[str, Any], timeout: int = 60, token: Optional[str] = None):
+    def __init__(self, host: Dict[str, Any], timeout: int = 60, token: Optional[str] = None, debug: bool = False):
         self.host = {
             "host": host.get("host"),
             "port": host.get("port", 80),
@@ -23,6 +23,8 @@ class _BaseClient(RequestContextHolder):
         self.headers = {}
         if token:
             self.headers["Authorization"] = f"Bearer {token}"
+
+        self.debug = debug
 
         self.is_hyperspace = True
 
@@ -214,17 +216,20 @@ class _AsyncIndices:
 
 
 class _SyncTransport:
-    def __init__(self, base_url: str, host: Dict[str, Any], headers: Dict[str, Any], timeout: int, ctx_holder: RequestContextHolder):
+    def __init__(self, base_url: str, host: Dict[str, Any], headers: Dict[str, Any], timeout: int, ctx_holder: RequestContextHolder, debug: bool = False):
         self.hosts = [host]
         self._base_url = base_url.rstrip("/")
         self._headers = headers
         self._timeout = timeout
         self._ctx_holder = ctx_holder
+        self._debug = debug
 
     def perform_request(self, method: str, path: str, params: Optional[Dict[str, Any]] = None,
                         body: Any = None, headers: Optional[Dict[str, Any]] = None):
         url = f"{self._base_url}/{path.lstrip('/')}"
         hdrs = {**self._headers, **(headers or {})}
+        if self._debug:
+            print(f"[DEBUG] {method} {url} params={params} body={body}")
         self._ctx_holder.on_client_request_start()
         self._ctx_holder.on_request_start()
         try:
@@ -245,18 +250,21 @@ class _SyncTransport:
 
 
 class _AsyncTransport:
-    def __init__(self, base_url: str, host: Dict[str, Any], headers: Dict[str, Any], timeout: int, session: aiohttp.ClientSession, ctx_holder: RequestContextHolder):
+    def __init__(self, base_url: str, host: Dict[str, Any], headers: Dict[str, Any], timeout: int, session: aiohttp.ClientSession, ctx_holder: RequestContextHolder, debug: bool = False):
         self.hosts = [host]
         self._base_url = base_url.rstrip("/")
         self._headers = headers
         self._timeout = timeout
         self._session = session
         self._ctx_holder = ctx_holder
+        self._debug = debug
 
     async def perform_request(self, method: str, path: str, params: Optional[Dict[str, Any]] = None,
                               body: Any = None, headers: Optional[Dict[str, Any]] = None):
         url = f"{self._base_url}/{path.lstrip('/')}"
         hdrs = {**self._headers, **(headers or {})}
+        if self._debug:
+            print(f"[DEBUG] {method} {url} params={params} body={body}")
         self._ctx_holder.on_client_request_start()
         self._ctx_holder.on_request_start()
         try:
@@ -282,9 +290,9 @@ class _AsyncTransport:
 class HyperspaceClient(_BaseClient):
     """Synchronous client for the Hyperspace service."""
 
-    def __init__(self, host: Dict[str, Any], timeout: int = 60, token: Optional[str] = None):
-        super().__init__(host, timeout, token)
-        self.transport = _SyncTransport(self.base_url, self.host, self.headers, timeout, self)
+    def __init__(self, host: Dict[str, Any], timeout: int = 60, token: Optional[str] = None, debug: bool = False):
+        super().__init__(host, timeout, token, debug)
+        self.transport = _SyncTransport(self.base_url, self.host, self.headers, timeout, self, debug)
         self.cluster = _Cluster()
         self.indices = _Indices(self)
         self.nodes = _Nodes(self)
@@ -384,10 +392,10 @@ class HyperspaceClient(_BaseClient):
 class AsyncHyperspaceClient(_BaseClient):
     """Asynchronous client for the Hyperspace service."""
 
-    def __init__(self, host: Dict[str, Any], timeout: int = 60, token: Optional[str] = None):
-        super().__init__(host, timeout, token)
+    def __init__(self, host: Dict[str, Any], timeout: int = 60, token: Optional[str] = None, debug: bool = False):
+        super().__init__(host, timeout, token, debug)
         self._session = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=timeout))
-        self.transport = _AsyncTransport(self.base_url, self.host, self.headers, timeout, self._session, self)
+        self.transport = _AsyncTransport(self.base_url, self.host, self.headers, timeout, self._session, self, debug)
         self.cluster = _AsyncCluster()
         self.indices = _AsyncIndices(self)
         self.nodes = _AsyncNodes(self)

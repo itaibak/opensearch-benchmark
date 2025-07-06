@@ -44,6 +44,7 @@ class OsClientFactory:
         self.client_options = dict(client_options)
         self.client_type = self.client_options.pop("client_type", "opensearch")
         self.token = self.client_options.pop("token", None)
+        self.debug = self.client_options.pop("debug", False)
         self.ssl_context = None
         self.logger = logging.getLogger(__name__)
         self.aws_log_in_dict = {}
@@ -208,7 +209,7 @@ class OsClientFactory:
             from osbenchmark.hyperspace_client import HyperspaceClient
             host = self.hosts[0]
             timeout = int(self.client_options.get("timeout", 60))
-            return HyperspaceClient(host, timeout=timeout, token=self.token)
+            return HyperspaceClient(host, timeout=timeout, token=self.token, debug=self.debug)
 
         import opensearchpy
         from botocore.credentials import Credentials
@@ -230,7 +231,7 @@ class OsClientFactory:
             from osbenchmark.hyperspace_client import AsyncHyperspaceClient
             host = self.hosts[0]
             timeout = int(self.client_options.get("timeout", 60))
-            return AsyncHyperspaceClient(host, timeout=timeout, token=self.token)
+            return AsyncHyperspaceClient(host, timeout=timeout, token=self.token, debug=self.debug)
 
         import opensearchpy
         import osbenchmark.async_connection
