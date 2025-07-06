@@ -1,5 +1,6 @@
 import json
 import pytest
+from pathlib import Path
 
 from osbenchmark.hyperspace_client import HyperspaceClient
 
@@ -13,6 +14,20 @@ def test_parse_bulk_body_from_string():
 def test_parse_bulk_body_from_list():
     docs_in = [{"field": 1}, {"field": 2}]
     assert HyperspaceClient._parse_bulk_body(docs_in) == docs_in
+
+
+def test_parse_bulk_body_from_file(tmp_path):
+    p = tmp_path / "bulk.json"
+    p.write_text('{"index":{"_id":"1"}}\n{"field":1}\n')
+    assert HyperspaceClient._parse_bulk_body(str(p)) == [{"field": 1}]
+
+
+def test_parse_bulk_body_from_handle(tmp_path):
+    p = tmp_path / "bulk.json"
+    p.write_text('{"index":{"_id":"1"}}\n{"field":1}\n')
+    with open(p, 'r') as f:
+        docs = HyperspaceClient._parse_bulk_body(f)
+    assert docs == [{"field": 1}]
 
 
 def test_transport_hosts():

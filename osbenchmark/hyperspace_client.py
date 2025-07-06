@@ -2,6 +2,7 @@
 """Client helpers for Hyperspace compatible REST API."""
 import json
 from typing import Any, List, Dict, Optional
+import os
 
 import msgpack
 import requests
@@ -349,8 +350,24 @@ class HyperspaceClient(_BaseClient):
     def _parse_bulk_body(body: Any) -> List[Dict[str, Any]]:
         if isinstance(body, list):
             return body
+
+        text = None
+        if isinstance(body, (bytes, bytearray)):
+            text = body.decode("utf-8")
+        elif hasattr(body, "read"):
+            raw = body.read()
+            text = raw.decode("utf-8") if isinstance(raw, (bytes, bytearray)) else raw
+        elif isinstance(body, str):
+            if os.path.isfile(body):
+                with open(body, "r", encoding="utf-8") as f:
+                    text = f.read()
+            else:
+                text = body
+        else:
+            text = str(body)
+
+        lines = [l.strip() for l in text.splitlines() if l.strip()]
         docs = []
-        lines = [l for l in str(body).splitlines() if l]
         skip_next = False
         for line in lines:
             if skip_next:
