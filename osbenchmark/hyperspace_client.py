@@ -25,6 +25,9 @@ class _BaseClient:
         self.cluster = None
         self.indices = None
 
+    def _url(self, path: str) -> str:
+        return f"{self.base_url.rstrip('/')}/{path.lstrip('/')}"
+
 
 class _Cluster:
     """Simple placeholder cluster client."""
@@ -130,6 +133,10 @@ class HyperspaceClient(_BaseClient):
         self.cluster = _Cluster()
         self.indices = _Indices(self)
 
+    def info(self) -> Dict[str, Any]:
+        # provide a minimal version response for compatibility
+        return {"version": {"number": "1.0.0"}}
+
     def bulk(self, index: str, body: Any) -> Dict[str, Any]:
         docs = self._parse_bulk_body(body)
         data = msgpack.packb(docs)
@@ -199,6 +206,9 @@ class AsyncHyperspaceClient(_BaseClient):
         self.transport = _AsyncTransport(self.base_url, self.host, self.headers, timeout, self._session)
         self.cluster = _AsyncCluster()
         self.indices = _AsyncIndices(self)
+
+    async def info(self) -> Dict[str, Any]:
+        return {"version": {"number": "1.0.0"}}
 
     async def bulk(self, index: str, body: Any, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         docs = HyperspaceClient._parse_bulk_body(body)
