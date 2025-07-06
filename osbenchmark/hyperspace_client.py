@@ -21,8 +21,63 @@ class _BaseClient:
         if token:
             self.headers["Authorization"] = f"Bearer {token}"
 
-    def _url(self, path: str) -> str:
-        return f"{self.base_url}/{path}"
+        # initialize helpers; subclasses may overwrite
+        self.cluster = None
+        self.indices = None
+
+
+class _Cluster:
+    """Simple placeholder cluster client."""
+
+    def health(self, *args, **kwargs):
+        return {"status": "green", "relocating_shards": 0}
+
+
+class _AsyncCluster:
+    """Async variant of :class:`_Cluster`."""
+
+    async def health(self, *args, **kwargs):
+        return {"status": "green", "relocating_shards": 0}
+
+
+class _Indices:
+    def __init__(self, client: "HyperspaceClient"):
+        self._client = client
+
+    def create(self, index: str, body: Any = None, **kwargs):
+        return self._client.indices_create(index=index, body=body)
+
+    def delete(self, index: str, params: Optional[Dict[str, Any]] = None, **kwargs):
+        return self._client.indices_delete(index=index)
+
+    def exists(self, index: str, **kwargs) -> bool:
+        info = requests.get(self._client._url("collectionsInfo"), headers=self._client.headers, timeout=self._client.timeout)
+        info.raise_for_status()
+        collections = info.json() or []
+        return any(c.get("name") == index for c in collections)
+
+    def refresh(self, index: str, **kwargs):
+        return self._client.commit(index)
+
+
+class _AsyncIndices:
+    def __init__(self, client: "AsyncHyperspaceClient"):
+        self._client = client
+
+    async def create(self, index: str, body: Any = None, **kwargs):
+        return await self._client.indices_create(index=index, body=body)
+
+    async def delete(self, index: str, params: Optional[Dict[str, Any]] = None, **kwargs):
+        return await self._client.indices_delete(index=index)
+
+    async def exists(self, index: str, **kwargs) -> bool:
+        async with self._client._session.get(self._client._url("collectionsInfo"), headers=self._client.headers) as resp:
+            resp.raise_for_status()
+            collections = await resp.json() or []
+            return any(c.get("name") == index for c in collections)
+
+    async def refresh(self, index: str, **kwargs):
+        return await self._client.commit(index)
 
 
 class _SyncTransport:
@@ -72,6 +127,8 @@ class HyperspaceClient(_BaseClient):
     def __init__(self, host: Dict[str, Any], timeout: int = 60, token: Optional[str] = None):
         super().__init__(host, timeout, token)
         self.transport = _SyncTransport(self.base_url, self.host, self.headers, timeout)
+        self.cluster = _Cluster()
+        self.indices = _Indices(self)
 
     def bulk(self, index: str, body: Any) -> Dict[str, Any]:
         docs = self._parse_bulk_body(body)
@@ -140,6 +197,8 @@ class AsyncHyperspaceClient(_BaseClient):
         super().__init__(host, timeout, token)
         self._session = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=timeout))
         self.transport = _AsyncTransport(self.base_url, self.host, self.headers, timeout, self._session)
+        self.cluster = _AsyncCluster()
+        self.indices = _AsyncIndices(self)
 
     async def bulk(self, index: str, body: Any, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         docs = HyperspaceClient._parse_bulk_body(body)

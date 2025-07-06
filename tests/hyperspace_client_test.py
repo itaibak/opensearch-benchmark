@@ -19,3 +19,16 @@ def test_transport_hosts():
     client = HyperspaceClient({"host": "localhost", "port": 9200})
     assert client.transport.hosts[0]["host"] == "localhost"
     client.close()
+
+
+def test_cluster_health_default():
+    client = HyperspaceClient({"host": "localhost"})
+    assert client.cluster.health()["status"] == "green"
+    client.close()
+
+
+def test_indices_wrapper():
+    client = HyperspaceClient({"host": "localhost"})
+    assert hasattr(client, "indices")
+    assert callable(getattr(client.indices, "create"))
+    client.close()
