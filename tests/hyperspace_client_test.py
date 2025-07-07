@@ -69,6 +69,7 @@ def test_info_build_hash():
 def test_debug_prints_api_call(monkeypatch, capsys):
     class Resp:
         content = b"{}"
+        headers = {"Content-Type": "application/json"}
         def raise_for_status(self):
             pass
         def json(self):
@@ -94,6 +95,7 @@ def test_bulk_packs_msgpack(monkeypatch):
 
     class Resp:
         content = b"{}"
+        headers = {"Content-Type": "application/json"}
 
         def raise_for_status(self):
             pass
@@ -117,4 +119,28 @@ def test_bulk_packs_msgpack(monkeypatch):
     packed = msgpack.unpackb(captured["data"])  # list of dicts
     assert packed[0]["_id"] == "1"
     assert isinstance(packed[0]["doc_data"], bytes)
+    client.close()
+
+
+def test_non_json_response(monkeypatch):
+    class Resp:
+        headers = {"Content-Type": "text/plain"}
+        content = b"ok"
+        def raise_for_status(self):
+            pass
+        def json(self):
+            raise ValueError
+
+    def dummy_request(method, url, params=None, data=None, json=None, headers=None, timeout=None):
+        return Resp()
+
+    monkeypatch.setattr(requests, "request", dummy_request)
+    monkeypatch.setattr(HyperspaceClient, "on_client_request_start", lambda self: None)
+    monkeypatch.setattr(HyperspaceClient, "on_client_request_end", lambda self: None)
+    monkeypatch.setattr(HyperspaceClient, "on_request_start", lambda self: None)
+    monkeypatch.setattr(HyperspaceClient, "on_request_end", lambda self: None)
+
+    client = HyperspaceClient({"host": "localhost"})
+    resp = client.transport.perform_request("GET", "collectionsInfo")
+    assert resp == {}
     client.close()

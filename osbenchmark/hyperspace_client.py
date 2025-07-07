@@ -238,7 +238,7 @@ class _SyncTransport:
             else:
                 resp = requests.request(method, url, params=params, json=body, headers=hdrs, timeout=self._timeout)
             resp.raise_for_status()
-            if resp.content:
+            if resp.content and resp.headers.get("Content-Type", "").startswith("application/json"):
                 return resp.json()
             return {}
         finally:
@@ -277,7 +277,11 @@ class _AsyncTransport:
                 headers=hdrs,
             ) as resp:
                 resp.raise_for_status()
-                result = await resp.json()
+                if resp.headers.get("Content-Type", "").startswith("application/json"):
+                    result = await resp.json()
+                else:
+                    await resp.read()
+                    result = {}
             return result
         finally:
             self._ctx_holder.on_request_end()
