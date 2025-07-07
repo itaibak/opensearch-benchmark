@@ -144,3 +144,34 @@ def test_non_json_response(monkeypatch):
     resp = client.transport.perform_request("GET", "collectionsInfo")
     assert resp == {}
     client.close()
+
+def test_search_uses_dsl(monkeypatch):
+    captured = {}
+
+    class Resp:
+        content = b"{}"
+        headers = {"Content-Type": "application/json"}
+        def raise_for_status(self):
+            pass
+        def json(self):
+            return {}
+
+    def dummy_request(method, url, params=None, data=None, json=None, headers=None, timeout=None):
+        captured['method'] = method
+        captured['url'] = url
+        captured['params'] = params
+        captured['json'] = json
+        return Resp()
+
+    monkeypatch.setattr(requests, "request", dummy_request)
+    monkeypatch.setattr(HyperspaceClient, "on_client_request_start", lambda self: None)
+    monkeypatch.setattr(HyperspaceClient, "on_client_request_end", lambda self: None)
+    monkeypatch.setattr(HyperspaceClient, "on_request_start", lambda self: None)
+    monkeypatch.setattr(HyperspaceClient, "on_request_end", lambda self: None)
+
+    client = HyperspaceClient({"host": "localhost"})
+    client.search("my-index", {"query": {"match_all": {}}}, params={"size": 5})
+    assert captured['url'].endswith('/my-index/dsl_search')
+    assert captured['json'] == {"query": {"match_all": {}}}
+    assert captured['params']["size"] == 5
+    client.close()
