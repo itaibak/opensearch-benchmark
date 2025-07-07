@@ -303,7 +303,11 @@ class HyperspaceClient(_BaseClient):
 
     def bulk(self, index: str, body: Any) -> Dict[str, Any]:
         docs = self._parse_bulk_body(body)
-        data = msgpack.packb(docs)
+        batch = [
+            {"_id": doc.get("_id", ""), "doc_data": msgpack.packb(doc)}
+            for doc in docs
+        ]
+        data = msgpack.packb(batch)
         return self.transport.perform_request(
             "POST",
             f"{index}/batch",
@@ -405,7 +409,11 @@ class AsyncHyperspaceClient(_BaseClient):
 
     async def bulk(self, index: str, body: Any, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         docs = HyperspaceClient._parse_bulk_body(body)
-        data = msgpack.packb(docs)
+        batch = [
+            {"_id": doc.get("_id", ""), "doc_data": msgpack.packb(doc)}
+            for doc in docs
+        ]
+        data = msgpack.packb(batch)
         return await self.transport.perform_request(
             "POST",
             f"{index}/batch",

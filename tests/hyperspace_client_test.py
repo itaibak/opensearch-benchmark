@@ -1,6 +1,7 @@
 import json
 import pytest
 import requests
+import msgpack
 from pathlib import Path
 
 from osbenchmark.hyperspace_client import HyperspaceClient
@@ -85,4 +86,35 @@ def test_debug_prints_api_call(monkeypatch, capsys):
     client.transport.perform_request("GET", "collectionsInfo")
     out = capsys.readouterr().out
     assert "[DEBUG] GET" in out
+    client.close()
+
+
+def test_bulk_packs_msgpack(monkeypatch):
+    captured = {}
+
+    class Resp:
+        content = b"{}"
+
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {}
+
+    def dummy_request(method, url, params=None, data=None, json=None, headers=None, timeout=None):
+        captured["data"] = data
+        return Resp()
+
+    monkeypatch.setattr(requests, "request", dummy_request)
+    monkeypatch.setattr(HyperspaceClient, "on_client_request_start", lambda self: None)
+    monkeypatch.setattr(HyperspaceClient, "on_client_request_end", lambda self: None)
+    monkeypatch.setattr(HyperspaceClient, "on_request_start", lambda self: None)
+    monkeypatch.setattr(HyperspaceClient, "on_request_end", lambda self: None)
+
+    client = HyperspaceClient({"host": "localhost"})
+    docs = [{"_id": "1", "field": 1}, {"field": 2}]
+    client.bulk("test", docs)
+    packed = msgpack.unpackb(captured["data"])  # list of dicts
+    assert packed[0]["_id"] == "1"
+    assert isinstance(packed[0]["doc_data"], bytes)
     client.close()
