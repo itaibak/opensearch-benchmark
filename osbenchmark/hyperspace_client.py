@@ -310,7 +310,7 @@ class HyperspaceClient(_BaseClient):
         # provide a minimal version response for compatibility
         return {"version": {"number": "1.0.0", "build_hash": ""}}
 
-    def bulk(self, index: str, body: Any) -> Dict[str, Any]:
+    def bulk(self, index: str, body: Any, params: Optional[Dict[str, Any]] = None, **_ignored) -> Dict[str, Any]:
         docs = self._parse_bulk_body(body)
         batch = [
             {"_id": doc.get("_id", ""), "doc_data": msgpack.packb(doc)}
@@ -320,11 +320,12 @@ class HyperspaceClient(_BaseClient):
         return self.transport.perform_request(
             "POST",
             f"{index}/batch",
+            params=params,
             body=data,
             headers={**self.headers, "Content-Type": "application/msgpack"},
         )
 
-    def index(self, index: str, document: Dict[str, Any]) -> Dict[str, Any]:
+    def index(self, index: str, document: Dict[str, Any], **_ignored) -> Dict[str, Any]:
         data = msgpack.packb(document)
         return self.transport.perform_request(
             "PUT",
@@ -333,7 +334,7 @@ class HyperspaceClient(_BaseClient):
             headers={**self.headers, "Content-Type": "application/msgpack"},
         )
 
-    def search(self, index: str, body: Dict[str, Any], params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def search(self, index: str, body: Dict[str, Any], params: Optional[Dict[str, Any]] = None, **_ignored) -> Dict[str, Any]:
         return self.transport.perform_request(
             "POST",
             f"{index}/dsl_search",
@@ -416,7 +417,7 @@ class AsyncHyperspaceClient(_BaseClient):
     async def info(self) -> Dict[str, Any]:
         return {"version": {"number": "1.0.0", "build_hash": ""}}
 
-    async def bulk(self, index: str, body: Any, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    async def bulk(self, index: str, body: Any, params: Optional[Dict[str, Any]] = None, **_ignored) -> Dict[str, Any]:
         docs = HyperspaceClient._parse_bulk_body(body)
         batch = [
             {"_id": doc.get("_id", ""), "doc_data": msgpack.packb(doc)}
@@ -431,7 +432,7 @@ class AsyncHyperspaceClient(_BaseClient):
             headers={**self.headers, "Content-Type": "application/msgpack"},
         )
 
-    async def index(self, index: str, document: Dict[str, Any]) -> Dict[str, Any]:
+    async def index(self, index: str, document: Dict[str, Any], **_ignored) -> Dict[str, Any]:
         data = msgpack.packb(document)
         return await self.transport.perform_request(
             "PUT",
@@ -440,7 +441,7 @@ class AsyncHyperspaceClient(_BaseClient):
             headers={**self.headers, "Content-Type": "application/msgpack"},
         )
 
-    async def search(self, index: str, body: Dict[str, Any], params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    async def search(self, index: str, body: Dict[str, Any], params: Optional[Dict[str, Any]] = None, **_ignored) -> Dict[str, Any]:
         return await self.transport.perform_request(
             "POST",
             f"{index}/dsl_search",
