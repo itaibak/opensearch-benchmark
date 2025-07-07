@@ -626,7 +626,10 @@ class BulkIndex(Runner):
             # determine success count regardless of unit because we need to iterate through all items anyway
             bulk_success_count = 0
             # Reparse fully in case of errors - this will be slower
-            parsed_response = json.loads(response.getvalue())
+            if hasattr(response, "getvalue"):
+                parsed_response = json.loads(response.getvalue())
+            else:
+                parsed_response = response
             for item in parsed_response["items"]:
                 data = next(iter(item.values()))
                 if data["status"] > 299 or ('_shards' in data and data["_shards"]["failed"] > 0):
@@ -1072,6 +1075,12 @@ def parse(text: BytesIO, props: List[str], lists: List[str] = None) -> dict:
     :param lists: An optional list of property paths to JSON lists in the provided text.
     :return: A dict containing all properties and lists that have been found in the provided text.
     """
+    if not hasattr(text, "seek"):
+        # allow passing already parsed JSON objects
+        if isinstance(text, (bytes, bytearray, str)):
+            text = BytesIO(text if isinstance(text, (bytes, bytearray)) else text.encode("utf-8"))
+        else:
+            text = BytesIO(json.dumps(text).encode("utf-8"))
     text.seek(0)
     parser = ijson.parse(text)
     parsed = {}
