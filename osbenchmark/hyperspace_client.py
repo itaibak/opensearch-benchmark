@@ -238,6 +238,9 @@ class _SyncTransport:
             else:
                 resp = requests.request(method, url, params=params, json=body, headers=hdrs, timeout=self._timeout)
             resp.raise_for_status()
+            if self._debug:
+                status = getattr(resp, "status", getattr(resp, "status_code", ""))
+                print(f"[DEBUG RESPONSE] {status} {resp.content}")
             if resp.content and resp.headers.get("Content-Type", "").startswith("application/json"):
                 return resp.json()
             return {}
@@ -277,10 +280,12 @@ class _AsyncTransport:
                 headers=hdrs,
             ) as resp:
                 resp.raise_for_status()
+                raw = await resp.read()
+                if self._debug:
+                    print(f"[DEBUG RESPONSE] {resp.status} {raw}")
                 if resp.headers.get("Content-Type", "").startswith("application/json"):
-                    result = await resp.json()
+                    result = json.loads(raw.decode("utf-8")) if raw else {}
                 else:
-                    await resp.read()
                     result = {}
             return result
         finally:
