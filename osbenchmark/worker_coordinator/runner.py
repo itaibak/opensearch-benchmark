@@ -1556,6 +1556,12 @@ class Query(Runner):
             return await _request_body_query(opensearch, params)
 
     async def _raw_search(self, opensearch, doc_type, index, body, params, headers=None):
+        if hasattr(opensearch, "is_hyperspace"):
+            # Use the client's search helper which knows the correct endpoint
+            request_context_holder.on_client_request_start()
+            response = await opensearch.search(index=index, body=body, params=params)
+            request_context_holder.on_client_request_end()
+            return response
         components = []
         if index:
             components.append(index)
