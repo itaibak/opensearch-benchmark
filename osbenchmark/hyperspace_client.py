@@ -335,6 +335,10 @@ class HyperspaceClient(_BaseClient):
         )
 
     def search(self, index: str, body: Dict[str, Any], params: Optional[Dict[str, Any]] = None, **_ignored) -> Dict[str, Any]:
+        if params is None:
+            params = {"size": 10}
+        elif "size" not in params:
+            params["size"] = 10
         return self.transport.perform_request(
             "POST",
             f"{index}/dsl_search",
@@ -442,6 +446,10 @@ class AsyncHyperspaceClient(_BaseClient):
         )
 
     async def search(self, index: str, body: Dict[str, Any], params: Optional[Dict[str, Any]] = None, **_ignored) -> Dict[str, Any]:
+        if params is None:
+            params = {"size": 10}
+        elif "size" not in params:
+            params["size"] = 10
         return await self.transport.perform_request(
             "POST",
             f"{index}/dsl_search",
