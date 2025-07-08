@@ -941,7 +941,10 @@ class WorkerCoordinator:
                 telemetry.ClusterEnvironmentInfo(os_default, self.metrics_store),
                 telemetry.JvmStatsSummary(os_default, self.metrics_store),
                 telemetry.IndexStats(os_default, self.metrics_store),
-                telemetry.MlBucketProcessingTime(os_default, self.metrics_store),
+            ]
+            if not getattr(os_default, "is_hyperspace", False):
+                devices.append(telemetry.MlBucketProcessingTime(os_default, self.metrics_store))
+            devices += [
                 telemetry.SegmentStats(log_root, os_default),
                 telemetry.CcrStats(telemetry_params, opensearch, self.metrics_store),
                 telemetry.RecoveryStats(telemetry_params, opensearch, self.metrics_store),
