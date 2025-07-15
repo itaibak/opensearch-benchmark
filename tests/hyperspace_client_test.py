@@ -197,3 +197,24 @@ def test_stub_index_apis():
     stats = client.indices.stats()
     assert stats["_all"]["total"]["merges"]["current"] == 0
     client.close()
+
+
+def test_wildcard_search_returns_empty(monkeypatch):
+    called = False
+
+    def dummy_request(*args, **kwargs):
+        nonlocal called
+        called = True
+        raise AssertionError("should not be called")
+
+    monkeypatch.setattr(requests, "request", dummy_request)
+    monkeypatch.setattr(HyperspaceClient, "on_client_request_start", lambda self: None)
+    monkeypatch.setattr(HyperspaceClient, "on_client_request_end", lambda self: None)
+    monkeypatch.setattr(HyperspaceClient, "on_request_start", lambda self: None)
+    monkeypatch.setattr(HyperspaceClient, "on_request_end", lambda self: None)
+
+    client = HyperspaceClient({"host": "localhost"})
+    resp = client.search("logs-*", {"query": {"match_all": {}}})
+    assert resp == {"hits": {"hits": []}}
+    assert called is False
+    client.close()

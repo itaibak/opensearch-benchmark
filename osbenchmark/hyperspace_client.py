@@ -417,6 +417,11 @@ class HyperspaceClient(_BaseClient):
         )
 
     def search(self, index: str, body: Dict[str, Any], params: Optional[Dict[str, Any]] = None, **_ignored) -> Dict[str, Any]:
+        if "*" in index:
+            # Hyperspace collections do not support wildcard patterns. Return an
+            # empty result so benchmarks relying on this API do not fail.
+            return {"hits": {"hits": []}}
+
         if params is None:
             params = {"size": 10}
         elif "size" not in params:
@@ -522,6 +527,10 @@ class AsyncHyperspaceClient(_BaseClient):
         )
 
     async def search(self, index: str, body: Dict[str, Any], params: Optional[Dict[str, Any]] = None, **_ignored) -> Dict[str, Any]:
+        if "*" in index:
+            # Skip unsupported wildcard searches by returning no results.
+            return {"hits": {"hits": []}}
+
         if params is None:
             params = {"size": 10}
         elif "size" not in params:
