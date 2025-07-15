@@ -33,12 +33,19 @@ class _BaseClient(RequestContextHolder):
         self.indices = None
         self.nodes = None
 
+    def _debug_log(self, msg: str) -> None:
+        if self.debug:
+            print(f"[DEBUG] {msg}")
+
     def _url(self, path: str) -> str:
         return f"{self.base_url.rstrip('/')}/{path.lstrip('/')}"
 
 
 class _Cluster:
     """Simple placeholder cluster client."""
+
+    def __init__(self, client: "HyperspaceClient"):
+        self._client = client
 
     def health(self, *args, **kwargs):
         return {"status": "green", "relocating_shards": 0}
@@ -48,20 +55,27 @@ class _Cluster:
     # client interface don't fail with AttributeError.
 
     def put_settings(self, *args, **kwargs):
+        self._client._debug_log("cluster.put_settings called - returning empty response")
         return {}
 
     def put_component_template(self, *args, **kwargs):
+        self._client._debug_log("cluster.put_component_template called - returning empty response")
         return {}
 
     def delete_component_template(self, *args, **kwargs):
+        self._client._debug_log("cluster.delete_component_template called - returning empty response")
         return {}
 
     def put_index_template(self, *args, **kwargs):
+        self._client._debug_log("cluster.put_index_template called - returning empty response")
         return {}
 
 
 class _AsyncCluster:
     """Async variant of :class:`_Cluster`."""
+
+    def __init__(self, client: "AsyncHyperspaceClient"):
+        self._client = client
 
     async def health(self, *args, **kwargs):
         return {"status": "green", "relocating_shards": 0}
@@ -71,15 +85,19 @@ class _AsyncCluster:
     # return an empty response.
 
     async def put_settings(self, *args, **kwargs):
+        self._client._debug_log("cluster.put_settings called - returning empty response")
         return {}
 
     async def put_component_template(self, *args, **kwargs):
+        self._client._debug_log("cluster.put_component_template called - returning empty response")
         return {}
 
     async def delete_component_template(self, *args, **kwargs):
+        self._client._debug_log("cluster.delete_component_template called - returning empty response")
         return {}
 
     async def put_index_template(self, *args, **kwargs):
+        self._client._debug_log("cluster.put_index_template called - returning empty response")
         return {}
 
 
@@ -208,25 +226,32 @@ class _Indices:
     def refresh(self, index: str, **kwargs):
         # Hyperspace does not expose a refresh/commit operation. Provide a
         # no-op implementation so benchmarks expecting this API do not fail.
+        self._client._debug_log(f"indices.refresh called for index={index} - returning empty response")
         return {}
 
     def put_settings(self, *args, **kwargs):
+        self._client._debug_log("indices.put_settings called - returning empty response")
         return {}
 
     def shrink(self, *args, **kwargs):
+        self._client._debug_log("indices.shrink called - returning empty response")
         return {}
 
     def delete_index_template(self, *args, **kwargs):
+        self._client._debug_log("indices.delete_index_template called - returning empty response")
         return {}
 
     def exists_template(self, *args, **kwargs) -> bool:
+        self._client._debug_log("indices.exists_template called - returning False")
         return False
 
     def forcemerge(self, *args, **kwargs):
+        self._client._debug_log("indices.forcemerge called - returning empty response")
         return {}
 
     def stats(self, metric: str = "_all", level: str = None, **kwargs):
         # Provide minimal stats so wait conditions in benchmarks succeed.
+        self._client._debug_log("indices.stats called - returning minimal stats")
         return {
             "_all": {
                 "total": {
@@ -268,21 +293,27 @@ class _AsyncIndices:
 
     async def refresh(self, index: str, **kwargs):
         # Refresh is not required by Hyperspace; return an empty response.
+        self._client._debug_log(f"indices.refresh called for index={index} - returning empty response")
         return {}
 
     async def put_settings(self, *args, **kwargs):
+        self._client._debug_log("indices.put_settings called - returning empty response")
         return {}
 
     async def shrink(self, *args, **kwargs):
+        self._client._debug_log("indices.shrink called - returning empty response")
         return {}
 
     async def delete_index_template(self, *args, **kwargs):
+        self._client._debug_log("indices.delete_index_template called - returning empty response")
         return {}
 
     async def exists_template(self, *args, **kwargs) -> bool:
+        self._client._debug_log("indices.exists_template called - returning False")
         return False
 
     async def stats(self, metric: str = "_all", level: str = None, **kwargs):
+        self._client._debug_log("indices.stats called - returning minimal stats")
         return {
             "_all": {
                 "total": {
@@ -294,6 +325,7 @@ class _AsyncIndices:
         }
 
     async def forcemerge(self, *args, **kwargs):
+        self._client._debug_log("indices.forcemerge called - returning empty response")
         return {}
 
 
@@ -384,7 +416,7 @@ class HyperspaceClient(_BaseClient):
     def __init__(self, host: Dict[str, Any], timeout: int = 60, token: Optional[str] = None, debug: bool = False):
         super().__init__(host, timeout, token, debug)
         self.transport = _SyncTransport(self.base_url, self.host, self.headers, timeout, self, debug)
-        self.cluster = _Cluster()
+        self.cluster = _Cluster(self)
         self.indices = _Indices(self)
         self.nodes = _Nodes(self)
 
@@ -433,6 +465,7 @@ class HyperspaceClient(_BaseClient):
             if "*" in index:
                 # Wildcard patterns are not supported; return an empty result
                 # instead of propagating the failure.
+                self._debug_log(f"wildcard search fallback for index={index}")
                 return {"hits": {"hits": []}}
             raise
 
@@ -497,7 +530,7 @@ class AsyncHyperspaceClient(_BaseClient):
         super().__init__(host, timeout, token, debug)
         self._session = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=timeout))
         self.transport = _AsyncTransport(self.base_url, self.host, self.headers, timeout, self._session, self, debug)
-        self.cluster = _AsyncCluster()
+        self.cluster = _AsyncCluster(self)
         self.indices = _AsyncIndices(self)
         self.nodes = _AsyncNodes(self)
 
@@ -543,6 +576,7 @@ class AsyncHyperspaceClient(_BaseClient):
             )
         except aiohttp.ClientResponseError:
             if "*" in index:
+                self._debug_log(f"wildcard search fallback for index={index}")
                 return {"hits": {"hits": []}}
             raise
 

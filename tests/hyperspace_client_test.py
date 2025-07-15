@@ -178,7 +178,7 @@ def test_search_uses_dsl(monkeypatch):
 
 
 def test_stub_cluster_apis():
-    client = HyperspaceClient({"host": "localhost"})
+    client = HyperspaceClient({"host": "localhost"}, debug=True)
     assert client.cluster.put_settings({}) == {}
     assert client.cluster.put_component_template("t", body={}) == {}
     assert client.cluster.delete_component_template("t") == {}
@@ -187,7 +187,7 @@ def test_stub_cluster_apis():
 
 
 def test_stub_index_apis():
-    client = HyperspaceClient({"host": "localhost"})
+    client = HyperspaceClient({"host": "localhost"}, debug=True)
     assert client.indices.refresh("idx") == {}
     assert client.indices.put_settings({}) == {}
     assert client.indices.shrink("s", target="t") == {}
@@ -196,6 +196,16 @@ def test_stub_index_apis():
     assert client.indices.forcemerge(index="idx") == {}
     stats = client.indices.stats()
     assert stats["_all"]["total"]["merges"]["current"] == 0
+    client.close()
+
+
+def test_fallback_logging(capsys):
+    client = HyperspaceClient({"host": "localhost"}, debug=True)
+    client.cluster.put_settings({})
+    client.indices.refresh("i")
+    out = capsys.readouterr().out
+    assert "cluster.put_settings" in out
+    assert "indices.refresh" in out
     client.close()
 
 
