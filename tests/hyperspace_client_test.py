@@ -184,3 +184,14 @@ def test_stub_cluster_apis():
     assert client.cluster.delete_component_template("t") == {}
     assert client.cluster.put_index_template("t", body={}) == {}
     client.close()
+
+
+def test_stub_index_apis():
+    client = HyperspaceClient({"host": "localhost"})
+    assert client.indices.refresh("idx") == {}
+    assert client.indices.put_settings({}) == {}
+    assert client.indices.shrink("s", target="t") == {}
+    assert client.indices.delete_index_template("t") == {}
+    assert client.indices.exists_template("t") is False
+    assert client.indices.forcemerge(index="idx") == {}
+    client.close()

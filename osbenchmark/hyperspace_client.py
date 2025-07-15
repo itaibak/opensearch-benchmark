@@ -222,6 +222,9 @@ class _Indices:
     def exists_template(self, *args, **kwargs) -> bool:
         return False
 
+    def forcemerge(self, *args, **kwargs):
+        return {}
+
     def stats(self, metric: str = "_all", level: str = None, **kwargs):
         return {}
 
@@ -271,6 +274,9 @@ class _AsyncIndices:
         return False
 
     async def stats(self, metric: str = "_all", level: str = None, **kwargs):
+        return {}
+
+    async def forcemerge(self, *args, **kwargs):
         return {}
 
 
