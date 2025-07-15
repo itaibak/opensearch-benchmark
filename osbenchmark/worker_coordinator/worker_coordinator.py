@@ -941,7 +941,10 @@ class WorkerCoordinator:
                 telemetry.ClusterEnvironmentInfo(os_default, self.metrics_store),
                 telemetry.JvmStatsSummary(os_default, self.metrics_store),
                 telemetry.IndexStats(os_default, self.metrics_store),
-                telemetry.MlBucketProcessingTime(os_default, self.metrics_store),
+            ]
+            if not getattr(os_default, "is_hyperspace", False):
+                devices.append(telemetry.MlBucketProcessingTime(os_default, self.metrics_store))
+            devices += [
                 telemetry.SegmentStats(log_root, os_default),
                 telemetry.CcrStats(telemetry_params, opensearch, self.metrics_store),
                 telemetry.RecoveryStats(telemetry_params, opensearch, self.metrics_store),
@@ -1000,7 +1003,7 @@ class WorkerCoordinator:
             self.target.on_cluster_details_retrieved(self.retrieve_cluster_info(os_clients))
 
         # Redline testing: Check if cpu feedback is enabled. Enable the node-stats telemetry device if we need to
-        cpu_max = self.config.opts("workload", "redline.max_cpu_usage", default_value=[])
+        cpu_max = self.config.opts("workload", "redline.max_cpu_usage", default_value=[], mandatory=False)
         if cpu_max:
             devices = self.config.opts("telemetry", "devices", default_value=[])
             if "node-stats" not in devices:
@@ -1100,7 +1103,7 @@ class WorkerCoordinator:
             metrics_index = None
             test_execution_id = None
             # we must have a metrics store connected for CPU based feedback
-            cpu_max = self.config.opts("workload", "redline.max_cpu_usage", default_value=None)
+            cpu_max = self.config.opts("workload", "redline.max_cpu_usage", default_value=None, mandatory=False)
             if cpu_max and isinstance(self.metrics_store, metrics.InMemoryMetricsStore):
                 raise exceptions.SystemSetupError("CPU-based feedback requires a metrics store. You are using an in-memory metrics store")
             elif cpu_max and "node-stats" not in self.config.opts("telemetry", "devices"):

@@ -522,9 +522,15 @@ class BulkIndex(Runner):
         request_context_holder.on_client_request_start()
 
         if with_action_metadata:
-            api_kwargs.pop("index", None)
-            # only half of the lines are documents
-            response = await opensearch.bulk(params=bulk_params, **api_kwargs)
+            # Elasticsearch allows specifying the target index in the action
+            # metadata of the bulk body. For Hyperspace we still need to pass
+            # the index explicitly so we preserve it in that case.
+            index_arg = api_kwargs.pop("index", None)
+            if hasattr(opensearch, "is_hyperspace") and index_arg:
+                response = await opensearch.bulk(index=index_arg, params=bulk_params, **api_kwargs)
+            else:
+                # only half of the lines are documents
+                response = await opensearch.bulk(params=bulk_params, **api_kwargs)
         else:
             response = await opensearch.bulk(doc_type=params.get("type"), params=bulk_params, **api_kwargs)
 
@@ -620,7 +626,10 @@ class BulkIndex(Runner):
             # determine success count regardless of unit because we need to iterate through all items anyway
             bulk_success_count = 0
             # Reparse fully in case of errors - this will be slower
-            parsed_response = json.loads(response.getvalue())
+            if hasattr(response, "getvalue"):
+                parsed_response = json.loads(response.getvalue())
+            else:
+                parsed_response = response
             for item in parsed_response["items"]:
                 data = next(iter(item.values()))
                 if data["status"] > 299 or ('_shards' in data and data["_shards"]["failed"] > 0):
@@ -1066,6 +1075,12 @@ def parse(text: BytesIO, props: List[str], lists: List[str] = None) -> dict:
     :param lists: An optional list of property paths to JSON lists in the provided text.
     :return: A dict containing all properties and lists that have been found in the provided text.
     """
+    if not hasattr(text, "seek"):
+        # allow passing already parsed JSON objects
+        if isinstance(text, (bytes, bytearray, str)):
+            text = BytesIO(text if isinstance(text, (bytes, bytearray)) else text.encode("utf-8"))
+        else:
+            text = BytesIO(json.dumps(text).encode("utf-8"))
     text.seek(0)
     parser = ijson.parse(text)
     parsed = {}
@@ -1541,6 +1556,12 @@ class Query(Runner):
             return await _request_body_query(opensearch, params)
 
     async def _raw_search(self, opensearch, doc_type, index, body, params, headers=None):
+        if hasattr(opensearch, "is_hyperspace"):
+            # Use the client's search helper which knows the correct endpoint
+            request_context_holder.on_client_request_start()
+            response = await opensearch.search(index=index, body=body, params=params)
+            request_context_holder.on_client_request_end()
+            return response
         components = []
         if index:
             components.append(index)

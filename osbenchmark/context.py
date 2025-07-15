@@ -43,19 +43,20 @@ class RequestContextManager:
 
     @property
     def request_start(self):
-        return self.ctx["request_start"]
+        return self.ctx.get("request_start", 0)
 
     @property
     def request_end(self):
-        return max((value for value in self.ctx["request_end_list"] if value < self.client_request_end))
+        end_list = self.ctx.get("request_end_list", [])
+        return max((value for value in end_list if value < self.client_request_end), default=0)
 
     @property
     def client_request_start(self):
-        return self.ctx["client_request_start"]
+        return self.ctx.get("client_request_start", 0)
 
     @property
     def client_request_end(self):
-        return self.ctx["client_request_end"]
+        return self.ctx.get("client_request_end", time.perf_counter())
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         # propagate earliest request start and most recent request end to parent
