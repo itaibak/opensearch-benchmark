@@ -175,3 +175,12 @@ def test_search_uses_dsl(monkeypatch):
     assert captured['json'] == {"query": {"match_all": {}}}
     assert captured['params']["size"] == 5
     client.close()
+
+
+def test_stub_cluster_apis():
+    client = HyperspaceClient({"host": "localhost"})
+    assert client.cluster.put_settings({}) == {}
+    assert client.cluster.put_component_template("t", body={}) == {}
+    assert client.cluster.delete_component_template("t") == {}
+    assert client.cluster.put_index_template("t", body={}) == {}
+    client.close()

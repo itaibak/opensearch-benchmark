@@ -43,12 +43,44 @@ class _Cluster:
     def health(self, *args, **kwargs):
         return {"status": "green", "relocating_shards": 0}
 
+    # The following cluster APIs are not supported by Hyperspace. They are
+    # provided as no-op implementations so callers relying on the OpenSearch
+    # client interface don't fail with AttributeError.
+
+    def put_settings(self, *args, **kwargs):
+        return {}
+
+    def put_component_template(self, *args, **kwargs):
+        return {}
+
+    def delete_component_template(self, *args, **kwargs):
+        return {}
+
+    def put_index_template(self, *args, **kwargs):
+        return {}
+
 
 class _AsyncCluster:
     """Async variant of :class:`_Cluster`."""
 
     async def health(self, *args, **kwargs):
         return {"status": "green", "relocating_shards": 0}
+
+    # Provide no-op implementations for APIs that the Hyperspace service does
+    # not support. They mimic the OpenSearch client's interface but simply
+    # return an empty response.
+
+    async def put_settings(self, *args, **kwargs):
+        return {}
+
+    async def put_component_template(self, *args, **kwargs):
+        return {}
+
+    async def delete_component_template(self, *args, **kwargs):
+        return {}
+
+    async def put_index_template(self, *args, **kwargs):
+        return {}
 
 
 class _Nodes:
@@ -176,6 +208,18 @@ class _Indices:
     def refresh(self, index: str, **kwargs):
         return self._client.commit(index)
 
+    def put_settings(self, *args, **kwargs):
+        return {}
+
+    def shrink(self, *args, **kwargs):
+        return {}
+
+    def delete_index_template(self, *args, **kwargs):
+        return {}
+
+    def exists_template(self, *args, **kwargs) -> bool:
+        return False
+
     def stats(self, metric: str = "_all", level: str = None, **kwargs):
         return {}
 
@@ -210,6 +254,18 @@ class _AsyncIndices:
 
     async def refresh(self, index: str, **kwargs):
         return await self._client.commit(index)
+
+    async def put_settings(self, *args, **kwargs):
+        return {}
+
+    async def shrink(self, *args, **kwargs):
+        return {}
+
+    async def delete_index_template(self, *args, **kwargs):
+        return {}
+
+    async def exists_template(self, *args, **kwargs) -> bool:
+        return False
 
     async def stats(self, metric: str = "_all", level: str = None, **kwargs):
         return {}
