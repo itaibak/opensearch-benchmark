@@ -200,12 +200,22 @@ def test_stub_index_apis():
 
 
 def test_wildcard_search_returns_empty(monkeypatch):
-    called = False
+    captured = {}
 
-    def dummy_request(*args, **kwargs):
-        nonlocal called
-        called = True
-        raise AssertionError("should not be called")
+    class Resp:
+        content = b"{}"
+        headers = {"Content-Type": "application/json"}
+
+        def raise_for_status(self):
+            raise requests.HTTPError()
+
+        def json(self):
+            return {}
+
+    def dummy_request(method, url, params=None, data=None, json=None, headers=None, timeout=None):
+        captured["method"] = method
+        captured["url"] = url
+        return Resp()
 
     monkeypatch.setattr(requests, "request", dummy_request)
     monkeypatch.setattr(HyperspaceClient, "on_client_request_start", lambda self: None)
@@ -216,5 +226,6 @@ def test_wildcard_search_returns_empty(monkeypatch):
     client = HyperspaceClient({"host": "localhost"})
     resp = client.search("logs-*", {"query": {"match_all": {}}})
     assert resp == {"hits": {"hits": []}}
-    assert called is False
+    assert captured["method"] == "POST"
+    assert captured["url"].endswith("logs-*/dsl_search")
     client.close()

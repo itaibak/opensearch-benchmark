@@ -417,22 +417,24 @@ class HyperspaceClient(_BaseClient):
         )
 
     def search(self, index: str, body: Dict[str, Any], params: Optional[Dict[str, Any]] = None, **_ignored) -> Dict[str, Any]:
-        if "*" in index:
-            # Hyperspace collections do not support wildcard patterns. Return an
-            # empty result so benchmarks relying on this API do not fail.
-            return {"hits": {"hits": []}}
-
         if params is None:
             params = {"size": 10}
         elif "size" not in params:
             params["size"] = 10
-        return self.transport.perform_request(
-            "POST",
-            f"{index}/dsl_search",
-            params=params,
-            body=body,
-            headers=self.headers,
-        )
+        try:
+            return self.transport.perform_request(
+                "POST",
+                f"{index}/dsl_search",
+                params=params,
+                body=body,
+                headers=self.headers,
+            )
+        except requests.HTTPError:
+            if "*" in index:
+                # Wildcard patterns are not supported; return an empty result
+                # instead of propagating the failure.
+                return {"hits": {"hits": []}}
+            raise
 
     def indices_create(self, index: str, body: Any = None) -> Dict[str, Any]:
         return self.transport.perform_request(
@@ -527,21 +529,22 @@ class AsyncHyperspaceClient(_BaseClient):
         )
 
     async def search(self, index: str, body: Dict[str, Any], params: Optional[Dict[str, Any]] = None, **_ignored) -> Dict[str, Any]:
-        if "*" in index:
-            # Skip unsupported wildcard searches by returning no results.
-            return {"hits": {"hits": []}}
-
         if params is None:
             params = {"size": 10}
         elif "size" not in params:
             params["size"] = 10
-        return await self.transport.perform_request(
-            "POST",
-            f"{index}/dsl_search",
-            params=params,
-            body=body,
-            headers=self.headers,
-        )
+        try:
+            return await self.transport.perform_request(
+                "POST",
+                f"{index}/dsl_search",
+                params=params,
+                body=body,
+                headers=self.headers,
+            )
+        except aiohttp.ClientResponseError:
+            if "*" in index:
+                return {"hits": {"hits": []}}
+            raise
 
     async def indices_create(self, index: str, body: Any = None) -> Dict[str, Any]:
         return await self.transport.perform_request(
