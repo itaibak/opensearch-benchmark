@@ -206,7 +206,9 @@ class _Indices:
         return False
 
     def refresh(self, index: str, **kwargs):
-        return self._client.commit(index)
+        # Hyperspace does not expose a refresh/commit operation. Provide a
+        # no-op implementation so benchmarks expecting this API do not fail.
+        return {}
 
     def put_settings(self, *args, **kwargs):
         return {}
@@ -253,7 +255,8 @@ class _AsyncIndices:
         return False
 
     async def refresh(self, index: str, **kwargs):
-        return await self._client.commit(index)
+        # Refresh is not required by Hyperspace; return an empty response.
+        return {}
 
     async def put_settings(self, *args, **kwargs):
         return {}
@@ -418,12 +421,6 @@ class HyperspaceClient(_BaseClient):
             headers=self.headers,
         )
 
-    def commit(self, index: str) -> Dict[str, Any]:
-        return self.transport.perform_request(
-            "GET",
-            f"{index}/commit",
-            headers=self.headers,
-        )
 
     def close(self):
         self.transport.close()
@@ -529,12 +526,6 @@ class AsyncHyperspaceClient(_BaseClient):
             headers=self.headers,
         )
 
-    async def commit(self, index: str) -> Dict[str, Any]:
-        return await self.transport.perform_request(
-            "GET",
-            f"{index}/commit",
-            headers=self.headers,
-        )
 
     async def close(self):
         await self.transport.close()
