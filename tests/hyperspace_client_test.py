@@ -194,4 +194,6 @@ def test_stub_index_apis():
     assert client.indices.delete_index_template("t") == {}
     assert client.indices.exists_template("t") is False
     assert client.indices.forcemerge(index="idx") == {}
+    stats = client.indices.stats()
+    assert stats["_all"]["total"]["merges"]["current"] == 0
     client.close()

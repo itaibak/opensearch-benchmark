@@ -226,7 +226,16 @@ class _Indices:
         return {}
 
     def stats(self, metric: str = "_all", level: str = None, **kwargs):
-        return {}
+        # Provide minimal stats so wait conditions in benchmarks succeed.
+        return {
+            "_all": {
+                "total": {
+                    "merges": {
+                        "current": 0
+                    }
+                }
+            }
+        }
 
 
 class _AsyncIndices:
@@ -274,7 +283,15 @@ class _AsyncIndices:
         return False
 
     async def stats(self, metric: str = "_all", level: str = None, **kwargs):
-        return {}
+        return {
+            "_all": {
+                "total": {
+                    "merges": {
+                        "current": 0
+                    }
+                }
+            }
+        }
 
     async def forcemerge(self, *args, **kwargs):
         return {}
