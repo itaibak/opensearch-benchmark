@@ -175,3 +175,67 @@ def test_search_uses_dsl(monkeypatch):
     assert captured['json'] == {"query": {"match_all": {}}}
     assert captured['params']["size"] == 5
     client.close()
+
+
+def test_stub_cluster_apis():
+    client = HyperspaceClient({"host": "localhost"}, debug=True)
+    assert client.cluster.put_settings({}) == {}
+    assert client.cluster.put_component_template("t", body={}) == {}
+    assert client.cluster.delete_component_template("t") == {}
+    assert client.cluster.put_index_template("t", body={}) == {}
+    client.close()
+
+
+def test_stub_index_apis():
+    client = HyperspaceClient({"host": "localhost"}, debug=True)
+    assert client.indices.refresh("idx") == {}
+    assert client.indices.put_settings({}) == {}
+    assert client.indices.shrink("s", target="t") == {}
+    assert client.indices.delete_index_template("t") == {}
+    assert client.indices.exists_template("t") is False
+    assert client.indices.forcemerge(index="idx") == {}
+    stats = client.indices.stats()
+    assert stats["_all"]["total"]["merges"]["current"] == 0
+    client.close()
+
+
+def test_fallback_logging(capsys):
+    client = HyperspaceClient({"host": "localhost"}, debug=True)
+    client.cluster.put_settings({})
+    client.indices.refresh("i")
+    out = capsys.readouterr().out
+    assert "cluster.put_settings" in out
+    assert "indices.refresh" in out
+    client.close()
+
+
+def test_wildcard_search_returns_empty(monkeypatch):
+    captured = {}
+
+    class Resp:
+        content = b"{}"
+        headers = {"Content-Type": "application/json"}
+
+        def raise_for_status(self):
+            raise requests.HTTPError()
+
+        def json(self):
+            return {}
+
+    def dummy_request(method, url, params=None, data=None, json=None, headers=None, timeout=None):
+        captured["method"] = method
+        captured["url"] = url
+        return Resp()
+
+    monkeypatch.setattr(requests, "request", dummy_request)
+    monkeypatch.setattr(HyperspaceClient, "on_client_request_start", lambda self: None)
+    monkeypatch.setattr(HyperspaceClient, "on_client_request_end", lambda self: None)
+    monkeypatch.setattr(HyperspaceClient, "on_request_start", lambda self: None)
+    monkeypatch.setattr(HyperspaceClient, "on_request_end", lambda self: None)
+
+    client = HyperspaceClient({"host": "localhost"})
+    resp = client.search("logs-*", {"query": {"match_all": {}}})
+    assert resp == {"hits": {"hits": []}}
+    assert captured["method"] == "POST"
+    assert captured["url"].endswith("logs-*/dsl_search")
+    client.close()
