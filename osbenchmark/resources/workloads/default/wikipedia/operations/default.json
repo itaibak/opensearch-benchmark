@@ -1,0 +1,238 @@
+{
+  "name": "delete-index",
+  "operation-type": "delete-index",
+  "include-in-reporting": false
+},
+{
+  "name": "create-index",
+  "operation-type": "create-index",
+  "include-in-reporting": false
+},
+{
+  "name": "check-cluster-health",
+  "operation-type": "cluster-health",
+  "request-params": {
+    "wait_for_status": "green"
+  },
+  "retry-until-success": true,
+  "include-in-reporting": false
+},
+{
+  "name": "initial-documents-indexing",
+  "operation-type": "bulk",
+  "bulk-size": {{ initial_indexing_bulk_size | default(250) | int }},
+  "ingest-percentage": {{ initial_indexing_ingest_percentage | default(100) | int }}
+},
+{
+  "name": "parallel-documents-indexing",
+  "operation-type": "bulk",
+  "bulk-size": {{ parallel_indexing_bulk_size | default(250) }},
+  "looped": true
+},
+{
+  "name": "refresh-after-index",
+  "operation-type": "refresh",
+  "request-timeout": 1000,
+  "include-in-reporting": false
+},
+{
+  "name": "force-merge",
+  "operation-type": "force-merge",
+  "request-timeout": 7200,
+  "include-in-reporting": false
+},
+{
+  "name": "refresh-after-force-merge",
+  "operation-type": "refresh",
+  "request-timeout": 1000,
+  "include-in-reporting": false
+},
+{
+  "name": "wait-until-merges-finish-after-index",
+  "operation-type": "index-stats",
+  "index": "_all",
+  "condition": {
+    "path": "_all.total.merges.current",
+    "expected-value": 0
+  },
+  "retry-until-success": true,
+  "include-in-reporting": false
+},
+{
+  "name": "create-default-search-application",
+  "operation-type": "raw-request",
+  "param-source": "create-search-application-param-source",
+  "include-in-reporting": false
+},
+{
+  "name": "default-search-application-search",
+  "operation-type": "raw-request",
+  "param-source": "search-application-search-param-source"
+},
+{
+  "name": "create-query-ruleset-1",
+  "operation-type": "raw-request",
+  "param-source": "create-query-ruleset-param-source",
+  "include-in-reporting": false,
+  "ruleset_id": "ruleset_1",
+  "ruleset_size": 1
+},
+{
+  "name": "create-query-ruleset-10",
+  "operation-type": "raw-request",
+  "param-source": "create-query-ruleset-param-source",
+  "include-in-reporting": false,
+  "ruleset_id": "ruleset_10",
+  "ruleset_size": 10
+},
+{
+  "name": "create-query-ruleset-100",
+  "operation-type": "raw-request",
+  "param-source": "create-query-ruleset-param-source",
+  "include-in-reporting": false,
+  "ruleset_id": "ruleset_100",
+  "ruleset_size": 100
+},
+{
+  "name": "create-query-ruleset-1000",
+  "operation-type": "raw-request",
+  "param-source": "create-query-ruleset-param-source",
+  "include-in-reporting": false,
+  "ruleset_id": "ruleset_1000",
+  "ruleset_size": 1000
+},
+{
+  "name": "query-rules-search-1",
+  "operation-type": "raw-request",
+  "param-source": "query-rules-search-param-source",
+  "size" : {{ query_string_search_page_size | default(20) | int }},
+  "search-fields" : "{{ query_string_search_fields | default("*") }}",
+  "ruleset_id": "ruleset_1"
+},
+{
+  "name": "query-rules-search-10",
+  "operation-type": "raw-request",
+  "param-source": "query-rules-search-param-source",
+  "size" : {{ query_string_search_page_size | default(20) | int }},
+  "search-fields" : "{{ query_string_search_fields | default("*") }}",
+  "ruleset_id": "ruleset_10"
+},
+{
+  "name": "query-rules-search-100",
+  "operation-type": "raw-request",
+  "param-source": "query-rules-search-param-source",
+  "size" : {{ query_string_search_page_size | default(20) | int }},
+  "search-fields" : "{{ query_string_search_fields | default("*") }}",
+  "ruleset_id": "ruleset_100"
+},
+{
+  "name": "query-rules-search-1000",
+  "operation-type": "raw-request",
+  "param-source": "query-rules-search-param-source",
+  "size" : {{ query_string_search_page_size | default(20) | int }},
+  "search-fields" : "{{ query_string_search_fields | default("*") }}",
+  "ruleset_id": "ruleset_1000"
+},
+{
+  "name": "pinned-search",
+  "operation-type": "raw-request",
+  "param-source": "pinned-search-param-source",
+  "size" : {{ query_string_search_page_size | default(20) | int }},
+  "search-fields" : "{{ query_string_search_fields | default("*") }}"
+},
+{
+  "name": "query-string-search",
+  "operation-type": "search",
+  "param-source": "query-search",
+  "query-type": "query-string",
+  "size" : {{ query_string_search_page_size | default(20) | int }},
+  "search-fields" : "{{ query_string_search_fields | default("*") }}"
+},
+{
+  "name": "query-esql-qstr-search",
+  "operation-type": "esql",
+  "param-source": "esql-search",
+  "query-type": "query-string",
+  "size" : {{ query_string_search_page_size | default(20) | int }},
+  "search-fields" : "{{ query_string_search_fields | default("*") }}"
+},
+{
+  "name": "query-match-search",
+  "operation-type": "search",
+  "param-source": "query-search",
+  "query-type": "multi_match",
+  "size" : {{ query_string_search_page_size | default(20) | int }},
+  "search-fields" : "{{ query_string_search_fields | default("*") }}"
+},
+{
+  "name": "query-esql-match-search",
+  "operation-type": "esql",
+  "param-source": "esql-search",
+  "query-type": "match",
+  "size" : {{ query_string_search_page_size | default(20) | int }},
+  "search-fields" : "{{ query_string_search_fields | default("*") }}"
+},
+{
+  "name": "query-match-phrase-search",
+  "operation-type": "search",
+  "param-source": "query-search",
+  "query-type": "match_phrase",
+  "size" : {{ query_string_search_page_size | default(20) | int }},
+  "search-fields" : "{{ query_string_search_fields | default("*") }}"
+},
+{
+  "name": "query-esql-match-phrase-search",
+  "operation-type": "esql",
+  "param-source": "esql-search",
+  "query-type": "match_phrase",
+  "size" : {{ query_string_search_page_size | default(20) | int }},
+  "search-fields" : "{{ query_string_search_fields | default("*") }}"
+},
+{
+  "name": "query-kql-search",
+  "operation-type": "search",
+  "param-source": "query-search",
+  "query-type": "kql",
+  "size" : {{ query_string_search_page_size | default(20) | int }},
+  "search-fields" : "{{ query_string_search_fields | default("*") }}"
+},
+{
+  "name": "query-esql-kql-search",
+  "operation-type": "esql",
+  "param-source": "esql-search",
+  "query-type": "kql",
+  "size" : {{ query_string_search_page_size | default(20) | int }},
+  "search-fields" : "{{ query_string_search_fields | default("*") }}"
+},
+{
+  "name": "query-term-search",
+  "operation-type": "search",
+  "param-source": "query-search",
+  "query-type": "term",
+  "size" : {{ query_string_search_page_size | default(20) | int }},
+  "search-fields" : "{{ query_string_search_fields | default("*") }}"
+},
+{
+  "name": "query-esql-term-search",
+  "operation-type": "esql",
+  "param-source": "esql-search",
+  "query-type": "term",
+  "size" : {{ query_string_search_page_size | default(20) | int }},
+  "search-fields" : "{{ query_string_search_fields | default("*") }}"
+},
+{
+  "name": "retriever-search",
+  "operation-type": "raw-request",
+  "param-source": "retriever-search",
+  "size" : {{ retriever_search_page_size | default(20) | int }},
+  "search-fields" : "{{ retriever_search_fields | default("*") }}"
+},
+{
+  "name": "retriever-search-with-rerank",
+  "operation-type": "raw-request",
+  "param-source": "retriever-search",
+  "size" : {{ retriever_search_page_size | default(20) | int }},
+  "search-fields" : "{{ retriever_search_fields | default("*") }}",
+  "rerank": "True",
+  "reranker": "random_reranker"
+}
