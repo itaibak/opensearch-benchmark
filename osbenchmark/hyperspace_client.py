@@ -30,8 +30,10 @@ class _BaseClient(RequestContextHolder):
         self.debug = debug
         if token:
             self.headers["Authorization"] = f"Bearer {token}"
-        elif login_user and login_password:
-            self._login(login_user, login_password)
+        elif login_user is not None or login_password is not None:
+            if login_user is None or login_password is None:
+                raise ValueError("login_user and login_password must both be provided")
+            self._login(str(login_user), str(login_password))
 
         self.is_hyperspace = True
 
@@ -54,6 +56,7 @@ class _BaseClient(RequestContextHolder):
         resp = requests.post(
             url,
             json={"username": username, "password": password},
+            headers={"Content-Type": "application/json"},
             timeout=self.timeout,
         )
         resp.raise_for_status()

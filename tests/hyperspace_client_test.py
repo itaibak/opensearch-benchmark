@@ -256,7 +256,7 @@ def test_login_fetches_token(monkeypatch, capsys):
         def json(self):
             return {"token": "abc"}
 
-    def dummy_post(url, json=None, timeout=None):
+    def dummy_post(url, json=None, headers=None, timeout=None):
         captured["url"] = url
         captured["json"] = json
         return Resp()
@@ -274,3 +274,10 @@ def test_login_fetches_token(monkeypatch, capsys):
     assert captured["url"].endswith("/login")
     assert "password=*****" in out
     client.close()
+
+
+def test_login_requires_both_credentials():
+    with pytest.raises(ValueError):
+        HyperspaceClient({"host": "localhost"}, login_user="user")
+    with pytest.raises(ValueError):
+        HyperspaceClient({"host": "localhost"}, login_password="pw")
