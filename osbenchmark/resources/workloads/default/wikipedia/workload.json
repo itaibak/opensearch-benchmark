@@ -19,7 +19,8 @@
           "source-file": "pages.json.bz2",
           "document-count": 22986185,
           "compressed-bytes": 19186224906,
-          "uncompressed-bytes": 82409155844
+          "uncompressed-bytes": 82409155844,
+          "target-index": "wikipedia"
         }
       ]
     }
