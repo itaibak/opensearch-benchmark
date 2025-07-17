@@ -82,6 +82,8 @@ Argument | Description | Required
 `load-worker-coordinator-hosts` | Define a comma-separated list of hosts which should generate load (default: `localhost`). | No
 `client-options` | Define a comma-separated list of client options to use. The options will be passed to the OpenSearch Python client (default: `timeout:60`). | No
 `client_type` | Set to `hyperspace` to use the Hyperspace compatible client instead of the OpenSearch client. | No
+`login_user` | Username for the Hyperspace login API. Only used with `client_type:hyperspace`. | No
+`login_password` | Password for the Hyperspace login API. Only used with `client_type:hyperspace`. | No
 `on-error` | Controls how OSB behaves on response errors. Options are `continue` and `abort` (default: `continue`). | No
 `telemetry` | Enable the provided telemetry devices, provided as a comma-separated list. List possible telemetry devices with `opensearch-benchmark list telemetry`. | No
 `telemetry-params` | Define a comma-separated list of key:value pairs that are injected verbatim to the telemetry devices as parameters. | No

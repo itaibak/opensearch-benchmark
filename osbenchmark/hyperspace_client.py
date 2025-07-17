@@ -12,7 +12,13 @@ from osbenchmark.context import RequestContextHolder
 
 
 class _BaseClient(RequestContextHolder):
-    def __init__(self, host: Dict[str, Any], timeout: int = 60, token: Optional[str] = None, debug: bool = False):
+    def __init__(self,
+                 host: Dict[str, Any],
+                 timeout: int = 60,
+                 token: Optional[str] = None,
+                 debug: bool = False,
+                 login_user: Optional[str] = None,
+                 login_password: Optional[str] = None):
         self.host = {
             "host": host.get("host"),
             "port": host.get("port", 80),
@@ -21,10 +27,11 @@ class _BaseClient(RequestContextHolder):
         self.base_url = f"{self.host['scheme']}://{self.host['host']}:{self.host['port']}/api/v1"
         self.timeout = timeout
         self.headers = {}
+        self.debug = debug
         if token:
             self.headers["Authorization"] = f"Bearer {token}"
-
-        self.debug = debug
+        elif login_user and login_password:
+            self._login(login_user, login_password)
 
         self.is_hyperspace = True
 
@@ -39,6 +46,23 @@ class _BaseClient(RequestContextHolder):
 
     def _url(self, path: str) -> str:
         return f"{self.base_url.rstrip('/')}/{path.lstrip('/')}"
+
+    def _login(self, username: str, password: str) -> None:
+        """Authenticate against the login API and store the bearer token."""
+        url = self._url("login")
+        self._debug_log(f"POST {url} username={username}")
+        resp = requests.post(
+            url,
+            json={"username": username, "password": password},
+            timeout=self.timeout,
+        )
+        resp.raise_for_status()
+        data = resp.json() if resp.content else {}
+        token = data.get("token") or data.get("access_token")
+        if token:
+            self.headers["Authorization"] = f"Bearer {token}"
+        else:
+            raise RuntimeError("Login response did not contain a token")
 
 
 class _Cluster:
@@ -413,8 +437,14 @@ class _AsyncTransport:
 class HyperspaceClient(_BaseClient):
     """Synchronous client for the Hyperspace service."""
 
-    def __init__(self, host: Dict[str, Any], timeout: int = 60, token: Optional[str] = None, debug: bool = False):
-        super().__init__(host, timeout, token, debug)
+    def __init__(self,
+                 host: Dict[str, Any],
+                 timeout: int = 60,
+                 token: Optional[str] = None,
+                 debug: bool = False,
+                 login_user: Optional[str] = None,
+                 login_password: Optional[str] = None):
+        super().__init__(host, timeout, token, debug, login_user, login_password)
         self.transport = _SyncTransport(self.base_url, self.host, self.headers, timeout, self, debug)
         self.cluster = _Cluster(self)
         self.indices = _Indices(self)
@@ -526,8 +556,14 @@ class HyperspaceClient(_BaseClient):
 class AsyncHyperspaceClient(_BaseClient):
     """Asynchronous client for the Hyperspace service."""
 
-    def __init__(self, host: Dict[str, Any], timeout: int = 60, token: Optional[str] = None, debug: bool = False):
-        super().__init__(host, timeout, token, debug)
+    def __init__(self,
+                 host: Dict[str, Any],
+                 timeout: int = 60,
+                 token: Optional[str] = None,
+                 debug: bool = False,
+                 login_user: Optional[str] = None,
+                 login_password: Optional[str] = None):
+        super().__init__(host, timeout, token, debug, login_user, login_password)
         self._session = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=timeout))
         self.transport = _AsyncTransport(self.base_url, self.host, self.headers, timeout, self._session, self, debug)
         self.cluster = _AsyncCluster(self)
