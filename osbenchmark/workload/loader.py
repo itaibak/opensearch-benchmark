@@ -1674,7 +1674,7 @@ class WorkloadSpecificationReader:
                     includes_action_and_meta_data = self._r(doc_spec, "includes-action-and-meta-data", mandatory=False,
                                                             default_value=default_action_and_meta_data)
                     if includes_action_and_meta_data:
-                        target_idx = None
+                        target_idx = self._r(doc_spec, "target-index", mandatory=False, default_value=corpus_target_idx)
                         target_type = None
                         target_ds = None
                     else:
