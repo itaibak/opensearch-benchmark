@@ -239,3 +239,47 @@ def test_wildcard_search_returns_empty(monkeypatch):
     assert captured["method"] == "POST"
     assert captured["url"].endswith("logs-*/dsl_search")
     client.close()
+
+
+def test_login_fetches_token(monkeypatch, capsys):
+    captured = {}
+
+    class Resp:
+        headers = {"Content-Type": "application/json"}
+
+        def __init__(self):
+            self.content = b'{"token":"abc"}'
+
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {"token": "abc"}
+
+    def dummy_post(url, json=None, headers=None, timeout=None):
+        captured["url"] = url
+        captured["json"] = json
+        captured["headers"] = headers
+        return Resp()
+
+    monkeypatch.setattr(requests, "post", dummy_post)
+    monkeypatch.setattr(HyperspaceClient, "on_client_request_start", lambda self: None)
+    monkeypatch.setattr(HyperspaceClient, "on_client_request_end", lambda self: None)
+    monkeypatch.setattr(HyperspaceClient, "on_request_start", lambda self: None)
+    monkeypatch.setattr(HyperspaceClient, "on_request_end", lambda self: None)
+
+    client = HyperspaceClient({"host": "localhost"}, login_user="user", login_password="pw", debug=True)
+    out = capsys.readouterr().out
+    assert client.headers["Authorization"] == "Bearer abc"
+    assert captured["json"] == {"username": "user", "password": "pw"}
+    assert captured["headers"]["Accept"] == "application/json"
+    assert captured["url"].endswith("/login")
+    assert "password=*****" in out
+    client.close()
+
+
+def test_login_requires_both_credentials():
+    with pytest.raises(ValueError):
+        HyperspaceClient({"host": "localhost"}, login_user="user")
+    with pytest.raises(ValueError):
+        HyperspaceClient({"host": "localhost"}, login_password="pw")

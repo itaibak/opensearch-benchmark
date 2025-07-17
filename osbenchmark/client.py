@@ -45,6 +45,8 @@ class OsClientFactory:
         self.client_type = self.client_options.pop("client_type", "opensearch")
         self.token = self.client_options.pop("token", None)
         self.debug = self.client_options.pop("debug", False)
+        self.login_user = self.client_options.pop("login_user", None)
+        self.login_password = self.client_options.pop("login_password", None)
         self.ssl_context = None
         self.logger = logging.getLogger(__name__)
         self.aws_log_in_dict = {}
@@ -52,6 +54,8 @@ class OsClientFactory:
         masked_client_options = dict(client_options)
         if "basic_auth_password" in masked_client_options:
             masked_client_options["basic_auth_password"] = "*****"
+        if "login_password" in masked_client_options:
+            masked_client_options["login_password"] = "*****"
         if "http_auth" in masked_client_options:
             masked_client_options["http_auth"] = (masked_client_options["http_auth"][0], "*****")
         if "amazon_aws_log_in" in masked_client_options:
@@ -209,7 +213,14 @@ class OsClientFactory:
             from osbenchmark.hyperspace_client import HyperspaceClient
             host = self.hosts[0]
             timeout = int(self.client_options.get("timeout", 60))
-            return HyperspaceClient(host, timeout=timeout, token=self.token, debug=self.debug)
+            return HyperspaceClient(
+                host,
+                timeout=timeout,
+                token=self.token,
+                debug=self.debug,
+                login_user=self.login_user,
+                login_password=self.login_password,
+            )
 
         import opensearchpy
         from botocore.credentials import Credentials
@@ -231,7 +242,14 @@ class OsClientFactory:
             from osbenchmark.hyperspace_client import AsyncHyperspaceClient
             host = self.hosts[0]
             timeout = int(self.client_options.get("timeout", 60))
-            return AsyncHyperspaceClient(host, timeout=timeout, token=self.token, debug=self.debug)
+            return AsyncHyperspaceClient(
+                host,
+                timeout=timeout,
+                token=self.token,
+                debug=self.debug,
+                login_user=self.login_user,
+                login_password=self.login_password,
+            )
 
         import opensearchpy
         import osbenchmark.async_connection

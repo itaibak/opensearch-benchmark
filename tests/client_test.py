@@ -57,6 +57,17 @@ class OsClientFactoryTests(TestCase):
 
         self.assertDictEqual(original_client_options, client_options)
 
+    def test_hyperspace_login_options_removed(self):
+        hosts = [{"host": "localhost"}]
+        client_options = {"client_type": "hyperspace", "login_user": "user", "login_password": "pw"}
+        original_client_options = dict(client_options)
+
+        f = client.OsClientFactory(hosts, client_options)
+
+        self.assertNotIn("login_user", f.client_options)
+        self.assertNotIn("login_password", f.client_options)
+        self.assertDictEqual(original_client_options, client_options)
+
     @mock.patch.object(ssl.SSLContext, "load_cert_chain")
     def test_create_https_connection_verify_server(self, mocked_load_cert_chain):
         hosts = [{"host": "localhost", "port": 9200}]
