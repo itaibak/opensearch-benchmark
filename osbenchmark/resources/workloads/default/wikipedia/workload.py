@@ -8,6 +8,20 @@ from typing import Iterator, List
 
 from osbenchmark.workload.params import ParamSource
 
+
+def index_names(track) -> List[str]:
+    """Return a list of index names for the provided workload."""
+    if hasattr(track, "indices") and track.indices:
+        return [idx.name for idx in track.indices]
+    if hasattr(track, "index_names"):
+        return track.index_names()
+    return []
+
+
+def first_index_name(track) -> str:
+    names = index_names(track)
+    return names[0] if names else "_all"
+
 QUERIES_DIRNAME: str = dirname(__file__)
 QUERIES_FILENAME: str = f"{QUERIES_DIRNAME}/queries.csv"
 SAMPLE_IDS_FILENAME: str = f"{QUERIES_DIRNAME}/ids.txt"
@@ -42,7 +56,7 @@ def ids_samples() -> List[str]:
 
 class SearchApplicationParams:
     def __init__(self, track, params):
-        self.indices = params.get("indices", track.index_names())
+        self.indices = params.get("indices", index_names(track))
         self.name = params.get("search-application", f"{self.indices[0]}-search-application")
 
 
@@ -64,7 +78,7 @@ class CreateSearchApplicationParamSource(ParamSource):
 
 class QueryRulesetParams:
     def __init__(self, track, params):
-        self.indices = params.get("indices", track.index_names())
+        self.indices = params.get("indices", index_names(track))
         self.ruleset_id = params.get("ruleset_id")
         self.ruleset_size = params.get("ruleset_size")
 
@@ -188,7 +202,7 @@ class PinnedSearchParamSource(QueryIteratorParamSource):
 class RetrieverParamSource(QueryIteratorParamSource):
     def __init__(self, track, params, **kwargs):
         super().__init__(track, params, **kwargs)
-        self._index_name = params.get("index", track.indices[0].name if len(track.indices) == 1 else "_all")
+        self._index_name = params.get("index", first_index_name(track))
         self._search_fields = self._params["search-fields"]
         self._rerank = params.get("rerank", False)
         self._reranker = params.get("reranker", "random_reranker")
@@ -218,7 +232,7 @@ class RetrieverParamSource(QueryIteratorParamSource):
 class EsqlSearchParamSource(QueryIteratorParamSource):
     def __init__(self, track, params, **kwargs):
         super().__init__(track, params, **kwargs)
-        self._index_name = params.get("index", track.indices[0].name if len(track.indices) == 1 else "_all")
+        self._index_name = params.get("index", first_index_name(track))
         self._search_fields = self._params["search-fields"]
         self._size = params.get("size", 20)
         self._query_type = self._params["query-type"]
@@ -251,7 +265,7 @@ class EsqlSearchParamSource(QueryIteratorParamSource):
 class QueryParamSource(QueryIteratorParamSource):
     def __init__(self, track, params, **kwargs):
         super().__init__(track, params, **kwargs)
-        self._index_name = params.get("index", track.indices[0].name if len(track.indices) == 1 else "_all")
+        self._index_name = params.get("index", first_index_name(track))
         self._cache = params.get("cache", False)
         self._query_type = self._params["query-type"]
 
