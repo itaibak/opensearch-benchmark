@@ -171,7 +171,7 @@
     "description": "Indexes and executes ES|QL and Query DSL full text functions queries",
     "default": false,
     "schedule": [
-      {{ rally.collect(parts="common/esql-full-text-functions.json") }}
+      {{ benchmark.collect(parts="common/esql-full-text-functions.json") }}
     ]
   },
   {
@@ -179,7 +179,7 @@
     "description": "Benchmark bulk indexing with configurable steps",
     "default": false,
     "schedule": [
-      {{ rally.collect(parts="common/ingest-autoscale-schedule.json") }}
+      {{ benchmark.collect(parts="common/ingest-autoscale-schedule.json") }}
     ]
   },
   {
@@ -187,7 +187,7 @@
     "description": "Benchmark search queries with configurable scaling steps",
     "default": false,
     "schedule": [
-      {{ rally.collect(parts="common/search-autoscale-schedule.json") }}
+      {{ benchmark.collect(parts="common/search-autoscale-schedule.json") }}
     ]
   },
   {
@@ -195,6 +195,6 @@
     "description": "Benchmark concurrent queries and bulk indexing with configurable scaling steps",
     "default": false,
     "schedule": [
-      {{ rally.collect(parts="common/ingest-search-autoscale-schedule.json") }}
+      {{ benchmark.collect(parts="common/ingest-search-autoscale-schedule.json") }}
     ]
   }

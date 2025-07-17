@@ -6,7 +6,7 @@ from os import getcwd
 from os.path import dirname
 from typing import Iterator, List
 
-from esrally.track.params import ParamSource
+from osbenchmark.workload.params import ParamSource
 
 QUERIES_DIRNAME: str = dirname(__file__)
 QUERIES_FILENAME: str = f"{QUERIES_DIRNAME}/queries.csv"
