@@ -327,6 +327,7 @@ class GitWorkloadRepository:
         workload_repositories = cfg.opts("benchmarks", "workload.repository.dir")
         workloads_dir = os.path.join(root, workload_repositories)
 
+        self.repo_name = repo_name
         self.repo = repo_class(remote_url, workloads_dir, repo_name, "workloads", offline, fetch)
         if update:
             if repo_revision:
@@ -337,14 +338,29 @@ class GitWorkloadRepository:
 
     @property
     def workload_names(self):
-        return filter(lambda p: os.path.exists(self.workload_file(p)), next(os.walk(self.repo.repo_dir))[1])
+        repo_dirs = []
+        if os.path.isdir(self.repo.repo_dir):
+            repo_dirs = next(os.walk(self.repo.repo_dir))[1]
+
+        bundled_root = os.path.join(
+            paths.benchmark_root(),
+            "resources",
+            "workloads",
+            self.repo_name,
+        )
+        bundled_dirs = []
+        if os.path.isdir(bundled_root):
+            bundled_dirs = [d for d in os.listdir(bundled_root) if os.path.isfile(os.path.join(bundled_root, d, "workload.json"))]
+
+        all_dirs = set(repo_dirs) | set(bundled_dirs)
+        return filter(lambda p: os.path.exists(self.workload_file(p)), all_dirs)
 
     def workload_dir(self, workload_name):
         bundled = os.path.join(
             paths.benchmark_root(),
             "resources",
             "workloads",
-            self.repo.resource_name,
+            self.repo_name,
             workload_name,
         )
         if os.path.exists(os.path.join(bundled, "workload.json")):
@@ -358,7 +374,7 @@ class GitWorkloadRepository:
             paths.benchmark_root(),
             "resources",
             "workloads",
-            self.repo.resource_name,
+            self.repo_name,
             workload_name,
             "workload.json",
         )
