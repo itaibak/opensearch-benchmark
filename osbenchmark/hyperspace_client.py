@@ -53,10 +53,14 @@ class _BaseClient(RequestContextHolder):
         """Authenticate against the login API and store the bearer token."""
         url = self._url("login")
         self._debug_log(f"POST {url} username={username} password=*****")
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        }
         resp = requests.post(
             url,
             json={"username": username, "password": password},
-            headers={"Content-Type": "application/json"},
+            headers=headers,
             timeout=self.timeout,
         )
         resp.raise_for_status()

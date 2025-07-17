@@ -259,6 +259,7 @@ def test_login_fetches_token(monkeypatch, capsys):
     def dummy_post(url, json=None, headers=None, timeout=None):
         captured["url"] = url
         captured["json"] = json
+        captured["headers"] = headers
         return Resp()
 
     monkeypatch.setattr(requests, "post", dummy_post)
@@ -271,6 +272,7 @@ def test_login_fetches_token(monkeypatch, capsys):
     out = capsys.readouterr().out
     assert client.headers["Authorization"] == "Bearer abc"
     assert captured["json"] == {"username": "user", "password": "pw"}
+    assert captured["headers"]["Accept"] == "application/json"
     assert captured["url"].endswith("/login")
     assert "password=*****" in out
     client.close()
