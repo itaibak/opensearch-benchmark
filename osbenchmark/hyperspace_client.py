@@ -50,7 +50,7 @@ class _BaseClient(RequestContextHolder):
     def _login(self, username: str, password: str) -> None:
         """Authenticate against the login API and store the bearer token."""
         url = self._url("login")
-        self._debug_log(f"POST {url} username={username}")
+        self._debug_log(f"POST {url} username={username} password=*****")
         resp = requests.post(
             url,
             json={"username": username, "password": password},

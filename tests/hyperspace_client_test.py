@@ -241,7 +241,7 @@ def test_wildcard_search_returns_empty(monkeypatch):
     client.close()
 
 
-def test_login_fetches_token(monkeypatch):
+def test_login_fetches_token(monkeypatch, capsys):
     captured = {}
 
     class Resp:
@@ -267,8 +267,10 @@ def test_login_fetches_token(monkeypatch):
     monkeypatch.setattr(HyperspaceClient, "on_request_start", lambda self: None)
     monkeypatch.setattr(HyperspaceClient, "on_request_end", lambda self: None)
 
-    client = HyperspaceClient({"host": "localhost"}, login_user="user", login_password="pw")
+    client = HyperspaceClient({"host": "localhost"}, login_user="user", login_password="pw", debug=True)
+    out = capsys.readouterr().out
     assert client.headers["Authorization"] == "Bearer abc"
     assert captured["json"] == {"username": "user", "password": "pw"}
     assert captured["url"].endswith("/login")
+    assert "password=*****" in out
     client.close()
