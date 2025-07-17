@@ -341,17 +341,30 @@ class GitWorkloadRepository:
 
     def workload_dir(self, workload_name):
         path = os.path.join(self.repo.repo_dir, workload_name)
-        if not os.path.exists(path):
-            bundled = os.path.join(paths.benchmark_root(), "resources", "workloads", self.repo.resource_name, workload_name)
+        if not os.path.exists(os.path.join(path, "workload.json")):
+            bundled = os.path.join(
+                paths.benchmark_root(),
+                "resources",
+                "workloads",
+                self.repo.resource_name,
+                workload_name,
+            )
             if os.path.exists(os.path.join(bundled, "workload.json")):
                 return bundled
         return path
 
     def workload_file(self, workload_name):
         path = os.path.join(self.repo.repo_dir, workload_name, "workload.json")
-        if not os.path.exists(path):
-            bundled = os.path.join(paths.benchmark_root(), "resources", "workloads", self.repo.resource_name, workload_name, "workload.json")
-            if os.path.exists(bundled):
+        if not os.path.isfile(path):
+            bundled = os.path.join(
+                paths.benchmark_root(),
+                "resources",
+                "workloads",
+                self.repo.resource_name,
+                workload_name,
+                "workload.json",
+            )
+            if os.path.isfile(bundled):
                 return bundled
         return path
 
