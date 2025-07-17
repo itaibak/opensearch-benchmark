@@ -42,6 +42,7 @@ from osbenchmark import exceptions, time, PROGRAM_NAME, config, version
 from osbenchmark.workload import params, workload
 from osbenchmark.workload.workload import Parallel
 from osbenchmark.utils import io, collections, convert, net, console, modules, opts, repo
+from osbenchmark import paths
 
 
 class WorkloadSyntaxError(exceptions.InvalidSyntax):
@@ -339,10 +340,20 @@ class GitWorkloadRepository:
         return filter(lambda p: os.path.exists(self.workload_file(p)), next(os.walk(self.repo.repo_dir))[1])
 
     def workload_dir(self, workload_name):
-        return os.path.join(self.repo.repo_dir, workload_name)
+        path = os.path.join(self.repo.repo_dir, workload_name)
+        if not os.path.exists(path):
+            bundled = os.path.join(paths.benchmark_root(), "resources", "workloads", self.repo.resource_name, workload_name)
+            if os.path.exists(os.path.join(bundled, "workload.json")):
+                return bundled
+        return path
 
     def workload_file(self, workload_name):
-        return os.path.join(self.workload_dir(workload_name), "workload.json")
+        path = os.path.join(self.repo.repo_dir, workload_name, "workload.json")
+        if not os.path.exists(path):
+            bundled = os.path.join(paths.benchmark_root(), "resources", "workloads", self.repo.resource_name, workload_name, "workload.json")
+            if os.path.exists(bundled):
+                return bundled
+        return path
 
 
 class SimpleWorkloadRepository:
