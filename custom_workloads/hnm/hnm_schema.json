@@ -1,0 +1,76 @@
+{
+  "configuration": {
+    "product_code": {
+      "type": "integer"
+    },
+    "prod_name": {
+      "type": "text"
+    },
+    "product_type_no": {
+      "type": "integer"
+    },
+    "product_type_name": {
+      "type": "keyword"
+    },
+    "product_group_name": {
+      "type": "keyword"
+    },
+    "graphical_appearance_no": {
+      "type": "integer"
+    },
+    "graphical_appearance_name": {
+      "type": "keyword"
+    },
+    "colour_group_code": {
+      "type": "integer"
+    },
+    "colour_group_name": {
+      "type": "keyword"
+    },
+    "perceived_colour_value_id": {
+      "type": "integer"
+    },
+    "perceived_colour_value_name": {
+      "type": "keyword"
+    },
+    "perceived_colour_master_id": {
+      "type": "integer"
+    },
+    "perceived_colour_master_name": {
+      "type": "keyword"
+    },
+    "department_no": {
+      "type": "integer"
+    },
+    "department_name": {
+      "type": "keyword"
+    },
+    "index_code": {
+      "type": "keyword"
+    },
+    "index_name": {
+      "type": "keyword"
+    },
+    "index_group_no": {
+      "type": "integer"
+    },
+    "index_group_name": {
+      "type": "keyword"
+    },
+    "section_no": {
+      "type": "integer"
+    },
+    "section_name": {
+      "type": "keyword"
+    },
+    "garment_group_no": {
+      "type": "integer"
+    },
+    "garment_group_name": {
+      "type": "keyword"
+    },
+    "detail_desc": {
+      "type": "text"
+    }
+  }
+}
