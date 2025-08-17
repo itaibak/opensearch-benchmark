@@ -3,6 +3,8 @@
 .DS_Store
 .AppleDouble
 .LSOverride
+test.py
+.gitignore
 
 # Icon must end with two \r
 Icon

@@ -22,7 +22,7 @@ class _BaseClient(RequestContextHolder):
         self.host = {
             "host": host.get("host"),
             "port": host.get("port", 80),
-            "scheme": host.get("scheme", "http"),
+            "scheme": host.get("scheme", "https"),
         }
         self.base_url = f"{self.host['scheme']}://{self.host['host']}:{self.host['port']}/api/v1"
         self.timeout = timeout

@@ -1,0 +1,86 @@
+{
+  "version": 2,
+  "description": "Minimal custom workload for Hyperspace test with 10 docs HNM full workload ingest and search",
+  "indices": [
+    {
+      "name": "hnm_qa",
+      "types": [
+        "_doc"
+      ],
+      "body": "hnm_schema.json"
+    }
+  ],
+  "corpora": [
+    {
+      "name": "test-hnm",
+      "documents": [
+        {
+          "target-index": "hnm_qa",
+          "source-file": "hnm_docs.json",
+          "document-count": 105000,
+          "compressed": false
+        }
+      ]
+    }
+  ],
+  "schedule": [
+    {
+      "operation": "delete-index"
+    },
+    {
+      "operation": "create-index"
+    },
+    {
+      "operation": "bulk",
+      "warmup-iterations": 0,
+      "iterations": 210
+    },
+    {
+      "operation": "search",
+      "warmup-iterations": 0,
+      "iterations": 100
+    }
+  ],
+  "operations": [
+    {
+      "name": "delete-index",
+      "operation-type": "delete-index"
+    },
+    {
+      "name": "create-index",
+      "operation-type": "create-index"
+    },
+    {
+      "name": "bulk",
+      "operation-type": "bulk",
+      "bulk-size": 500
+    },
+    {
+      "name": "search",
+      "operation-type": "search",
+      "body": {
+        "query": {
+          "bool": {
+            "must": [
+              {
+                "match": {
+                  "detail_desc": "lace"
+                }
+              }
+            ],
+            "filter": [
+              {
+                "term": {
+                  "garment_group_name": "Dresses Ladies"
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}
+
+
+
